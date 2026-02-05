@@ -46,14 +46,16 @@ export default function App() {
   const [newBookName, setNewBookName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   
-  // 复习状态
+  // 复习与预览状态
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [previewWord, setPreviewWord] = useState(null);
+  
+  // 学习目标状态
   const [dailyGoal, setDailyGoal] = useState(10);
   const [todayLearnedCount, setTodayLearnedCount] = useState(0);
 
-  // 1. 认证
+  // 1. 登录认证 (Rule 3: Auth Before Queries)
   useEffect(() => {
     const initAuth = async () => {
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -67,21 +69,24 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. 数据同步
+  // 2. 数据实时同步
   useEffect(() => {
     if (!user) return;
 
+    // 同步单词本
     const booksCol = collection(db, 'artifacts', appId, 'users', user.uid, 'books');
     const unsubscribeBooks = onSnapshot(booksCol, (snapshot) => {
       setBooks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
+    // 同步所有单词
     const vocabCol = collection(db, 'artifacts', appId, 'users', user.uid, 'vocabulary');
     const unsubscribeVocab = onSnapshot(vocabCol, (snapshot) => {
       setWords(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     });
 
+    // 同步设置与每日进度
     const settingsDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'prefs');
     const unsubscribeSettings = onSnapshot(settingsDoc, (docSnap) => {
       if (docSnap.exists()) {
@@ -100,13 +105,21 @@ export default function App() {
     };
   }, [user]);
 
-  // 3. AI 智能识别原型并入库
+  // 3. AI 智能识词逻辑 (输入变形词自动转原型)
   const generateWordData = async (inputWord) => {
     if (!inputWord.trim() || !activeBookId) return;
     setIsGenerating(true);
     
-    const systemPrompt = `你是一个俄语专家。任务：将输入词转换为词典原型并返回 JSON。
-    格式: { "original": "原型", "accented": "带重音符号的原型 (unicode \\u0301)", "meaning": "中文", "example_ru": "俄语例句", "example_cn": "中文翻译" }`;
+    const systemPrompt = `你是一个俄语教学专家。
+    任务：将输入单词转为【词典原型】并返回 JSON。
+    JSON格式要求：
+    {
+      "original": "原型单词",
+      "accented": "带重音符号的原型 (unicode \\u0301 放在重音元音后)",
+      "meaning": "准确中文释义",
+      "example_ru": "简短例句",
+      "example_cn": "例句翻译"
+    }`;
 
     try {
       const apiKey = ""; 
@@ -136,6 +149,7 @@ export default function App() {
         createdAt: Timestamp.now()
       });
 
+      // 更新每日学习计数
       const settingsRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'prefs');
       await setDoc(settingsRef, {
         todayCount: todayLearnedCount + 1,
@@ -144,23 +158,31 @@ export default function App() {
       }, { merge: true });
 
       setNewWord('');
-    } catch (e) { console.error(e); } finally { setIsGenerating(false); }
+    } catch (e) {
+      console.error("AI Error:", e);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  // 4. 艾宾浩斯逻辑处理
+  // 4. 艾宾浩斯核心逻辑更新 (三档反馈)
   const handleReviewAction = async (wordId, feedback) => {
     const word = words.find(w => w.id === wordId);
     let stage = word.srsStage || 0;
     let nextDate = new Date();
 
     if (feedback === 'mastered') {
+      // 掌握：阶段+1，按天数间隔推迟
       stage = Math.min(stage + 1, SRS_INTERVALS.length - 1);
       const days = SRS_INTERVALS[stage];
-      days === 0 ? nextDate.setMinutes(nextDate.getMinutes() + 30) : nextDate.setDate(nextDate.getDate() + days);
+      if (days === 0) nextDate.setMinutes(nextDate.getMinutes() + 30);
+      else nextDate.setDate(nextDate.getDate() + days);
     } else if (feedback === 'uncertain') {
+      // 不确定：阶段退后一级，固定明天复习
       stage = Math.max(0, stage - 1);
       nextDate.setDate(nextDate.getDate() + 1); 
     } else {
+      // 不熟：彻底重置，5分钟后循环出现
       stage = 0;
       nextDate.setMinutes(nextDate.getMinutes() + 5); 
     }
@@ -170,6 +192,7 @@ export default function App() {
       nextReview: Timestamp.fromDate(nextDate)
     });
 
+    // 移动卡片索引
     if (currentCardIndex < reviewQueue.length - 1) {
       setCurrentCardIndex(prev => prev + 1);
       setShowAnswer(false);
@@ -186,6 +209,7 @@ export default function App() {
     window.speechSynthesis.speak(u);
   };
 
+  // 派生数据：过滤当前书本的单词和待复习队列
   const currentBookWords = useMemo(() => words.filter(w => w.bookId === activeBookId), [words, activeBookId]);
   
   const reviewQueue = useMemo(() => {
@@ -198,21 +222,21 @@ export default function App() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-screen bg-slate-50 text-indigo-600">
       <Loader2 className="w-10 h-10 animate-spin mb-4" />
-      <span className="font-bold tracking-widest">正在载入记忆库...</span>
+      <span className="font-bold tracking-widest">正在同步艾宾浩斯进度...</span>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 pb-28 font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 pb-28 font-sans antialiased">
       {/* 顶部标题栏 */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-lg border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           {activeBookId ? (
             <button onClick={() => {setActiveBookId(null); setActiveTab('list');}} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
               <ChevronLeft className="w-5 h-5 text-slate-600" />
             </button>
           ) : (
-            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-100">
+            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg">
               <Library className="text-white w-5 h-5" />
             </div>
           )}
@@ -228,7 +252,7 @@ export default function App() {
 
       <main className="max-w-md mx-auto p-5">
         {!activeBookId ? (
-          /* 书架列表 */
+          /* 书架界面 */
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">创建新单词本</label>
@@ -237,14 +261,8 @@ export default function App() {
                   type="text" 
                   value={newBookName}
                   onChange={(e) => setNewBookName(e.target.value)}
-                  placeholder="书名，如：基础俄语..."
-                  className="flex-1 px-4 py-3 rounded-2xl bg-slate-50 border-none font-bold text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                  onKeyDown={(e) => e.key === 'Enter' && newBookName && (async () => {
-                    await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'books'), {
-                      name: newBookName, createdAt: Timestamp.now(), color: 'bg-indigo-500'
-                    });
-                    setNewBookName('');
-                  })()}
+                  placeholder="如：日常生活俄语..."
+                  className="flex-1 px-4 py-3 rounded-2xl bg-slate-50 border-none font-bold text-sm focus:ring-2 focus:ring-indigo-500/20"
                 />
                 <button onClick={async () => {
                   if (!newBookName) return;
@@ -252,7 +270,7 @@ export default function App() {
                     name: newBookName, createdAt: Timestamp.now(), color: 'bg-indigo-500'
                   });
                   setNewBookName('');
-                }} className="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                }} className="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg">
                   <Plus className="w-6 h-6" />
                 </button>
               </div>
@@ -260,17 +278,17 @@ export default function App() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 flex justify-between items-center px-1">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">我的收藏</h3>
-                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Cloud className="w-3 h-3" /> 云端同步中</span>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">书架藏书</h3>
+                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Cloud className="w-3 h-3" /> 云端同步</span>
               </div>
               {books.map(book => (
-                <div key={book.id} onClick={() => setActiveBookId(book.id)} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm relative group cursor-pointer hover:border-indigo-200 transition-all active:scale-95">
-                  <div className={`w-10 h-10 ${book.color || 'bg-indigo-500'} rounded-xl mb-4 flex items-center justify-center text-white shadow-lg shadow-indigo-100`}>
+                <div key={book.id} onClick={() => setActiveBookId(book.id)} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm relative group cursor-pointer hover:border-indigo-300 transition-all active:scale-95">
+                  <div className="w-10 h-10 bg-indigo-500 rounded-xl mb-4 flex items-center justify-center text-white shadow-md">
                     <BookOpen className="w-5 h-5" />
                   </div>
                   <h4 className="font-extrabold text-slate-800 mb-1 truncate">{book.name}</h4>
-                  <p className="text-[10px] font-bold text-slate-400">
-                    {words.filter(w => w.bookId === book.id).length} 个词汇
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">
+                    {words.filter(w => w.bookId === book.id).length} 词汇
                   </p>
                   <button onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'books', book.id)); }} className="absolute top-4 right-4 p-1 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
                     <Trash2 className="w-3.5 h-3.5" />
@@ -280,44 +298,41 @@ export default function App() {
             </div>
           </div>
         ) : (
-          /* 书本内详情与复习 */
+          /* 书本内页 */
           <div className="space-y-6">
             {activeTab === 'list' ? (
               <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                {/* 单词输入 */}
                 <div className="bg-white p-5 rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex gap-2">
                     <input 
                       type="text" 
                       value={newWord}
                       onChange={(e) => setNewWord(e.target.value)}
-                      placeholder="输入单词变位或变格..."
+                      placeholder="输入任意形式(自动转原型)..."
                       className="flex-1 px-5 py-3 rounded-2xl bg-slate-50 border-none font-bold placeholder:text-slate-300"
                       onKeyDown={(e) => e.key === 'Enter' && generateWordData(newWord)}
                     />
-                    <button onClick={() => generateWordData(newWord)} disabled={isGenerating || !newWord} className="bg-indigo-600 text-white w-12 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 disabled:bg-slate-200">
+                    <button onClick={() => generateWordData(newWord)} disabled={isGenerating || !newWord} className="bg-indigo-600 text-white w-12 rounded-2xl flex items-center justify-center shadow-lg disabled:bg-slate-200">
                       {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-6 h-6" />}
                     </button>
                   </div>
                 </div>
 
-                {/* 待复习横幅 */}
-                <button onClick={() => {setCurrentCardIndex(0); setActiveTab('study');}} className="w-full bg-gradient-to-br from-indigo-600 to-blue-700 p-6 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200 flex items-center justify-between active:scale-[0.98] transition-all group">
+                <button onClick={() => {setCurrentCardIndex(0); setActiveTab('study');}} className="w-full bg-gradient-to-br from-indigo-600 to-blue-700 p-6 rounded-[2.5rem] text-white shadow-xl flex items-center justify-between active:scale-[0.98] transition-all group">
                   <div className="text-left">
-                    <p className="text-xs font-bold opacity-70 mb-1 flex items-center gap-1"><Brain className="w-3 h-3" /> 艾宾浩斯复习</p>
+                    <p className="text-xs font-bold opacity-70 mb-1 flex items-center gap-1 uppercase tracking-widest"><Brain className="w-3 h-3" /> 待复习</p>
                     <p className="text-4xl font-black">{reviewQueue.length}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold bg-white/20 px-4 py-1.5 rounded-full">立即开始</span>
+                    <span className="text-xs font-bold bg-white/20 px-4 py-1.5 rounded-full">艾宾浩斯模式</span>
                     <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform">
                       <ChevronRight className="w-5 h-5" />
                     </div>
                   </div>
                 </button>
 
-                {/* 词库列表 */}
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">词本列表 ({currentBookWords.length})</h3>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">本册词单 ({currentBookWords.length})</h3>
                   {currentBookWords.sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).map(word => (
                     <div key={word.id} onClick={() => setPreviewWord(word)} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between hover:border-indigo-300 transition-all cursor-pointer group active:scale-[0.99]">
                       <div className="flex-1">
@@ -339,23 +354,23 @@ export default function App() {
               <div className="h-[75vh] flex flex-col space-y-6 animate-in zoom-in-95 duration-300">
                 {reviewQueue.length > 0 ? (
                   <>
-                    <div className="flex justify-between items-center text-[10px] font-black text-slate-400 tracking-widest">
-                      <span>复习进度</span>
+                    <div className="flex justify-between items-center text-[10px] font-black text-slate-400 tracking-widest uppercase">
+                      <span>复习中</span>
                       <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full">{currentCardIndex + 1} / {reviewQueue.length}</span>
                     </div>
 
-                    <div onClick={() => !showAnswer && setShowAnswer(true)} className="flex-1 bg-white rounded-[4rem] shadow-2xl shadow-indigo-50 p-8 flex flex-col items-center justify-center text-center border border-slate-100 cursor-pointer relative">
+                    <div onClick={() => !showAnswer && setShowAnswer(true)} className="flex-1 bg-white rounded-[4rem] shadow-2xl p-8 flex flex-col items-center justify-center text-center border border-slate-100 cursor-pointer relative">
                       {!showAnswer ? (
-                        <div className="space-y-6 animate-in fade-in zoom-in duration-300">
+                        <div className="space-y-6">
                           <h2 className="text-5xl font-black russian-text leading-tight">{reviewQueue[currentCardIndex].word}</h2>
-                          <p className="text-indigo-300 text-xs font-black uppercase tracking-[0.2em] animate-pulse">点击翻转卡片</p>
+                          <p className="text-indigo-300 text-xs font-black uppercase tracking-[0.2em] animate-pulse">点击翻转查看</p>
                         </div>
                       ) : (
                         <div className="w-full space-y-8 animate-in fade-in duration-500">
                           <div>
                             <div className="flex items-center justify-center gap-3 mb-2">
                               <h2 className="text-4xl font-black text-indigo-600 russian-text">{reviewQueue[currentCardIndex].accented || reviewQueue[currentCardIndex].word}</h2>
-                              <button onClick={(e) => { e.stopPropagation(); speak(reviewQueue[currentCardIndex].word); }} className="p-2 bg-indigo-50 text-indigo-600 rounded-full active:scale-90"><Volume2 className="w-5 h-5" /></button>
+                              <button onClick={(e) => { e.stopPropagation(); speak(reviewQueue[currentCardIndex].word); }} className="p-2 bg-indigo-50 text-indigo-600 rounded-full active:scale-90 transition-all"><Volume2 className="w-5 h-5" /></button>
                             </div>
                             <p className="text-2xl font-bold text-slate-800">{reviewQueue[currentCardIndex].meaning}</p>
                           </div>
@@ -373,7 +388,7 @@ export default function App() {
                         <div className="grid grid-cols-3 gap-3 animate-in slide-in-from-bottom-4 duration-500">
                           <button onClick={() => handleReviewAction(reviewQueue[currentCardIndex].id, 'unfamiliar')} className="p-4 rounded-[2rem] bg-white border border-slate-100 text-red-500 shadow-sm flex flex-col items-center gap-1 active:scale-90 transition-all hover:bg-red-50">
                             <XCircle className="w-6 h-6" /> <span className="text-[10px] font-black uppercase">不熟</span>
-                            <span className="text-[8px] opacity-40 font-bold">5min后回访</span>
+                            <span className="text-[8px] opacity-40 font-bold">5min后见</span>
                           </button>
                           <button onClick={() => handleReviewAction(reviewQueue[currentCardIndex].id, 'uncertain')} className="p-4 rounded-[2rem] bg-white border border-slate-100 text-amber-500 shadow-sm flex flex-col items-center gap-1 active:scale-90 transition-all hover:bg-amber-50">
                             <HelpCircle className="w-6 h-6" /> <span className="text-[10px] font-black uppercase">不确定</span>
@@ -381,7 +396,7 @@ export default function App() {
                           </button>
                           <button onClick={() => handleReviewAction(reviewQueue[currentCardIndex].id, 'mastered')} className="p-4 rounded-[2rem] bg-white border border-slate-100 text-emerald-500 shadow-sm flex flex-col items-center gap-1 active:scale-90 transition-all hover:bg-emerald-50">
                             <CheckCircle className="w-6 h-6" /> <span className="text-[10px] font-black uppercase">掌握</span>
-                            <span className="text-[8px] opacity-40 font-bold">进入下阶段</span>
+                            <span className="text-[8px] opacity-40 font-bold">加深记忆</span>
                           </button>
                         </div>
                       )}
@@ -391,10 +406,10 @@ export default function App() {
                   <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
                     <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shadow-inner"><Award className="w-12 h-12" /></div>
                     <div>
-                      <h2 className="text-3xl font-black text-slate-800">学习达标！</h2>
+                      <h2 className="text-3xl font-black text-slate-800">学习完成！</h2>
                       <p className="text-slate-400 mt-2 font-medium">所有的单词都已妥善记忆。<br/>休息一下，明天再来。</p>
                     </div>
-                    <button onClick={() => setActiveTab('list')} className="bg-indigo-600 text-white px-10 py-4 rounded-[2rem] font-bold shadow-xl shadow-indigo-100 active:scale-95 transition-all">返回词库</button>
+                    <button onClick={() => setActiveTab('list')} className="bg-indigo-600 text-white px-10 py-4 rounded-[2rem] font-bold shadow-xl active:scale-95 transition-all">返回词库</button>
                   </div>
                 )}
               </div>
@@ -403,7 +418,7 @@ export default function App() {
         )}
       </main>
 
-      {/* 单词预览浮窗 */}
+      {/* 单词详情预览浮窗 */}
       {previewWord && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setPreviewWord(null)} />
@@ -439,7 +454,7 @@ export default function App() {
       )}
 
       {/* 底部导航 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 flex justify-around p-4 pb-8 z-20 shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 flex justify-around p-4 pb-10 z-20 shadow-lg">
         <button onClick={() => {setActiveTab('list'); setActiveBookId(null);}} className={`flex flex-col items-center gap-1 transition-all ${(!activeBookId && activeTab === 'list') ? 'text-indigo-600' : 'text-slate-300'}`}>
           <Library className="w-6 h-6" />
           <span className="text-[10px] font-black uppercase">书架</span>
