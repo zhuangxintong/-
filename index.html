@@ -2,247 +2,474 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>俄语单词宝 - 艾宾浩斯复习</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>俄语单词宝 - 艾宾浩斯记忆</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, addDoc, Timestamp, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- 环境配置 ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'russian-vocab-html-v3';
+        const apiKey = ""; // Runtime provides the key
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // 艾宾浩斯阶段 (天数)
+        const SRS_INTERVALS = [0, 1, 2, 4, 7, 15, 30, 60, 180];
+        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+
+        // 全局状态
+        let state = {
+            user: null,
+            books: [],
+            words: [],
+            activeBookId: null,
+            activeTab: 'list', // 'list' or 'study'
+            currentCardIndex: 0,
+            showAnswer: false,
+            dailyGoal: 10,
+            todayCount: 0,
+            isGenerating: false
+        };
+
+        // --- 核心功能: UI 渲染 ---
+        function render() {
+            const root = document.getElementById('app');
+            if (!state.user) {
+                root.innerHTML = `<div class="flex items-center justify-center h-screen text-indigo-600 font-bold">正在认证身份...</div>`;
+                return;
+            }
+
+            root.innerHTML = `
+                <div class="min-h-screen bg-[#F8FAFC] text-slate-900 pb-28 font-sans antialiased">
+                    ${renderHeader()}
+                    <main class="max-w-md mx-auto p-5">
+                        ${state.activeBookId ? renderBookDetail() : renderBookshelf()}
+                    </main>
+                    ${renderNav()}
+                    ${renderModals()}
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function renderHeader() {
+            return `
+                <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-3">
+                        ${state.activeBookId ? 
+                            `<button onclick="setActiveBook(null)" class="p-2 hover:bg-slate-100 rounded-full"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>` :
+                            `<div class="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-100"><i data-lucide="library" class="text-white w-5 h-5"></i></div>`
+                        }
+                        <h1 class="text-lg font-extrabold truncate max-w-[140px]">
+                            ${state.activeBookId ? (state.books.find(b => b.id === state.activeBookId)?.name || '词本') : "我的书架"}
+                        </h1>
+                    </div>
+                    <div class="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100">
+                        <i data-lucide="award" class="w-4 h-4 text-amber-500"></i>
+                        <span class="text-xs font-black text-indigo-700">${state.todayCount}/${state.dailyGoal}</span>
+                    </div>
+                </header>
+            `;
+        }
+
+        function renderBookshelf() {
+            return `
+                <div class="space-y-6 animate-in fade-in duration-500">
+                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">新建单词书</p>
+                        <div class="flex gap-2">
+                            <input id="bookInput" type="text" placeholder="书名，如：基础俄语..." class="flex-1 px-4 py-3 rounded-2xl bg-slate-50 border-none font-bold text-sm focus:ring-2 focus:ring-indigo-500/20">
+                            <button onclick="createBook()" class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"><i data-lucide="plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2 flex justify-between items-center px-1">
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">我的藏书</h3>
+                            <span class="text-[10px] font-bold text-slate-400 flex items-center gap-1"><i data-lucide="cloud" class="w-3 h-3"></i> 云端同步</span>
+                        </div>
+                        ${state.books.map(book => `
+                            <div onclick="setActiveBook('${book.id}')" class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm relative group cursor-pointer hover:border-indigo-300 transition-all active:scale-95">
+                                <div class="w-10 h-10 bg-indigo-500 rounded-xl mb-4 flex items-center justify-center text-white shadow-md"><i data-lucide="book-open" class="w-5 h-5"></i></div>
+                                <h4 class="font-extrabold text-slate-800 mb-1 truncate">${book.name}</h4>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase">${state.words.filter(w => w.bookId === book.id).length} 词汇</p>
+                                <button onclick="event.stopPropagation(); deleteBook('${book.id}')" class="absolute top-4 right-4 p-1 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBookDetail() {
+            if (state.activeTab === 'study') return renderStudyMode();
+
+            const bookWords = state.words.filter(w => w.bookId === state.activeBookId);
+            const dueWords = getDueWords();
+
+            return `
+                <div class="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                    <div class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-slate-100">
+                        <div class="flex gap-2">
+                            <input id="wordInput" type="text" placeholder="输入变体单词(AI转原型)..." class="flex-1 px-5 py-3 rounded-2xl bg-slate-50 border-none font-bold">
+                            <button onclick="addWord()" ${state.isGenerating ? 'disabled' : ''} class="bg-indigo-600 text-white w-12 rounded-2xl flex items-center justify-center shadow-lg disabled:bg-slate-200">
+                                ${state.isGenerating ? `<i data-lucide="loader-2" class="animate-spin"></i>` : `<i data-lucide="plus"></i>`}
+                            </button>
+                        </div>
+                    </div>
+
+                    <button onclick="startStudy()" class="w-full bg-gradient-to-br from-indigo-600 to-blue-700 p-6 rounded-[2.5rem] text-white shadow-xl flex items-center justify-between group active:scale-[0.98] transition-all">
+                        <div class="text-left">
+                            <p class="text-xs font-bold opacity-70 mb-1 flex items-center gap-1 uppercase tracking-widest"><i data-lucide="brain" class="w-3 h-3"></i> 待复习</p>
+                            <p class="text-4xl font-black">${dueWords.length}</p>
+                        </div>
+                        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform"><i data-lucide="chevron-right"></i></div>
+                    </button>
+
+                    <div class="space-y-3">
+                        ${bookWords.sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).map(word => `
+                            <div onclick="showPreview('${word.id}')" class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between hover:border-indigo-300 transition-all cursor-pointer group">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-lg font-bold russian-text">${word.accented || word.word}</span>
+                                        <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-500 text-[10px] font-black rounded">STEP ${word.srsStage || 0}</span>
+                                    </div>
+                                    <p class="text-sm text-slate-400 font-bold truncate max-w-[200px]">${word.meaning}</p>
+                                </div>
+                                <button onclick="event.stopPropagation(); deleteWord('${word.id}')" class="p-3 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStudyMode() {
+            const queue = getDueWords();
+            if (queue.length === 0) {
+                return `
+                    <div class="h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
+                        <div class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shadow-inner"><i data-lucide="award" class="w-12 h-12"></i></div>
+                        <h2 class="text-3xl font-black text-slate-800">学习达标！</h2>
+                        <button onclick="setTab('list')" class="bg-indigo-600 text-white px-10 py-4 rounded-[2rem] font-bold shadow-lg">返回词库</button>
+                    </div>
+                `;
+            }
+
+            const word = queue[state.currentCardIndex];
+            return `
+                <div class="h-[75vh] flex flex-col space-y-6 animate-in zoom-in-95 duration-300">
+                    <div class="flex justify-between items-center text-[10px] font-black text-slate-400 tracking-widest uppercase">
+                        <span>复习进度</span>
+                        <span class="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full">${state.currentCardIndex + 1} / ${queue.length}</span>
+                    </div>
+
+                    <div onclick="flipCard()" class="flex-1 bg-white rounded-[4rem] shadow-2xl p-8 flex flex-col items-center justify-center text-center border border-slate-100 cursor-pointer relative overflow-hidden">
+                        ${!state.showAnswer ? `
+                            <div class="space-y-6">
+                                <h2 class="text-5xl font-black russian-text leading-tight">${word.word}</h2>
+                                <p class="text-indigo-300 text-xs font-black uppercase tracking-[0.2em] animate-pulse">点击翻转卡片</p>
+                            </div>
+                        ` : `
+                            <div class="w-full space-y-8 animate-in fade-in duration-500">
+                                <div>
+                                    <div class="flex items-center justify-center gap-3 mb-2">
+                                        <h2 class="text-4xl font-black text-indigo-600 russian-text">${word.accented || word.word}</h2>
+                                        <button onclick="event.stopPropagation(); speak('${word.word}')" class="p-2 bg-indigo-50 text-indigo-600 rounded-full active:scale-90"><i data-lucide="volume-2" class="w-5 h-5"></i></button>
+                                    </div>
+                                    <p class="text-2xl font-bold text-slate-800">${word.meaning}</p>
+                                </div>
+                                <div class="bg-slate-50 rounded-[2.5rem] p-6 text-left border border-slate-100 space-y-3">
+                                    <p class="text-sm font-bold text-slate-700 leading-relaxed russian-text italic">"${word.exampleRu}"</p>
+                                    <div class="h-px bg-slate-200 w-full opacity-50"></div>
+                                    <p class="text-xs text-slate-400 font-medium leading-relaxed">${word.exampleCn}</p>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+
+                    <div class="h-32">
+                        ${state.showAnswer ? `
+                            <div class="grid grid-cols-3 gap-3 animate-in slide-in-from-bottom-4 duration-500">
+                                <button onclick="handleSRS('${word.id}', 'bad')" class="p-4 rounded-[2rem] bg-white border border-slate-100 text-red-500 shadow-sm flex flex-col items-center gap-1 active:scale-90">
+                                    <i data-lucide="x-circle"></i> <span class="text-[10px] font-black uppercase">不熟</span>
+                                    <span class="text-[8px] opacity-40 font-bold">5min后见</span>
+                                </button>
+                                <button onclick="handleSRS('${word.id}', 'uncertain')" class="p-4 rounded-[2rem] bg-white border border-slate-100 text-amber-500 shadow-sm flex flex-col items-center gap-1 active:scale-90">
+                                    <i data-lucide="help-circle"></i> <span class="text-[10px] font-black uppercase">不确定</span>
+                                    <span class="text-[8px] opacity-40 font-bold">明天复习</span>
+                                </button>
+                                <button onclick="handleSRS('${word.id}', 'mastered')" class="p-4 rounded-[2rem] bg-white border border-slate-100 text-emerald-500 shadow-sm flex flex-col items-center gap-1 active:scale-90">
+                                    <i data-lucide="check-circle"></i> <span class="text-[10px] font-black uppercase">掌握</span>
+                                    <span class="text-[8px] opacity-40 font-bold">延长间隔</span>
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderNav() {
+            return `
+                <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 flex justify-around p-4 pb-10 z-20 shadow-lg">
+                    <button onclick="setActiveBook(null)" class="flex flex-col items-center gap-1 ${!state.activeBookId ? 'text-indigo-600' : 'text-slate-300'}">
+                        <i data-lucide="library" class="w-6 h-6"></i>
+                        <span class="text-[10px] font-black uppercase">书架</span>
+                    </button>
+                    <button onclick="startStudy()" class="flex flex-col items-center gap-1 ${state.activeTab === 'study' ? 'text-indigo-600' : 'text-slate-300'}">
+                        <div class="relative">
+                            <i data-lucide="brain" class="w-6 h-6"></i>
+                            ${getDueWords().length > 0 ? `<span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>` : ''}
+                        </div>
+                        <span class="text-[10px] font-black uppercase">复习</span>
+                    </button>
+                </nav>
+            `;
+        }
+
+        function renderModals() {
+            if (!state.previewWord) return '';
+            const word = state.previewWord;
+            return `
+                <div class="fixed inset-0 z-50 flex items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closePreview()"></div>
+                    <div class="relative w-full max-w-sm bg-white rounded-[3.5rem] shadow-2xl p-8">
+                        <button onclick="closePreview()" class="absolute top-6 right-6 p-2 bg-slate-50 rounded-full text-slate-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+                        <div class="text-center space-y-8 mt-4">
+                            <div>
+                                <div class="flex items-center justify-center gap-3 mb-2">
+                                    <h2 class="text-4xl font-black text-indigo-600 russian-text">${word.accented || word.word}</h2>
+                                    <button onclick="speak('${word.word}')" class="p-2 bg-indigo-50 text-indigo-600 rounded-full active:scale-90"><i data-lucide="volume-2" class="w-5 h-5"></i></button>
+                                </div>
+                                <p class="text-2xl font-bold text-slate-800">${word.meaning}</p>
+                            </div>
+                            <div class="bg-slate-50 rounded-[2.5rem] p-6 text-left border border-slate-100 space-y-3">
+                                <p class="text-sm font-bold text-slate-700 leading-relaxed russian-text italic">"${word.exampleRu}"</p>
+                                <div class="h-px bg-slate-200 w-full opacity-50"></div>
+                                <p class="text-xs text-slate-400 font-medium leading-relaxed">${word.exampleCn}</p>
+                            </div>
+                            <button onclick="closePreview()" class="w-full py-4 bg-slate-900 text-white rounded-[2rem] font-bold shadow-lg">看完了</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 核心功能: 数据逻辑 ---
+        async function init() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    state.user = user;
+                    bindData();
+                } else {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                }
+                render();
+            });
+        }
+
+        function bindData() {
+            const userId = auth.currentUser.uid;
+            // 同步书架
+            onSnapshot(collection(db, 'artifacts', appId, 'users', userId, 'books'), snap => {
+                state.books = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                render();
+            });
+            // 同步单词
+            onSnapshot(collection(db, 'artifacts', appId, 'users', userId, 'vocabulary'), snap => {
+                state.words = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                render();
+            });
+            // 同步进度
+            onSnapshot(doc(db, 'artifacts', appId, 'users', userId, 'settings', 'prefs'), d => {
+                if (d.exists()) {
+                    const data = d.data();
+                    state.dailyGoal = data.dailyGoal || 10;
+                    const todayStr = new Date().toDateString();
+                    state.todayCount = data.lastResetDate?.toDate().toDateString() === todayStr ? data.todayCount : 0;
+                    render();
+                }
+            });
+        }
+
+        window.createBook = async () => {
+            const name = document.getElementById('bookInput').value;
+            if (!name) return;
+            await addDoc(collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'books'), {
+                name, createdAt: Timestamp.now()
+            });
+            document.getElementById('bookInput').value = '';
+        };
+
+        window.deleteBook = async (id) => {
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'books', id));
+        };
+
+        window.addWord = async () => {
+            const input = document.getElementById('wordInput').value;
+            if (!input || state.isGenerating) return;
+            state.isGenerating = true;
+            render();
+
+            const systemPrompt = `你是一个俄语专家。任务：将输入转换为原型并返回 JSON：{"original": "原型", "accented": "带重音的原型", "meaning": "中文", "example_ru": "俄文例句", "example_cn": "中文翻译"}`;
+            
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `单词: ${input}` }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+                const data = await res.json();
+                const content = JSON.parse(data.candidates[0].content.parts[0].text);
+
+                await addDoc(collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'vocabulary'), {
+                    bookId: state.activeBookId,
+                    word: content.original,
+                    accented: content.accented,
+                    meaning: content.meaning,
+                    exampleRu: content.example_ru,
+                    exampleCn: content.example_cn,
+                    srsStage: 0,
+                    nextReview: Timestamp.now(),
+                    createdAt: Timestamp.now()
+                });
+
+                // 更新每日目标
+                const settingsRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'settings', 'prefs');
+                await setDoc(settingsRef, {
+                    todayCount: state.todayCount + 1,
+                    dailyGoal: state.dailyGoal,
+                    lastResetDate: Timestamp.now()
+                }, { merge: true });
+
+                document.getElementById('wordInput').value = '';
+            } catch (e) {
+                console.error(e);
+            } finally {
+                state.isGenerating = false;
+                render();
+            }
+        };
+
+        window.handleSRS = async (wordId, feedback) => {
+            const word = state.words.find(w => w.id === wordId);
+            let stage = word.srsStage || 0;
+            let nextDate = new Date();
+
+            if (feedback === 'mastered') {
+                stage = Math.min(stage + 1, SRS_INTERVALS.length - 1);
+                const days = SRS_INTERVALS[stage];
+                days === 0 ? nextDate.setMinutes(nextDate.getMinutes() + 30) : nextDate.setDate(nextDate.getDate() + days);
+            } else if (feedback === 'uncertain') {
+                stage = Math.max(0, stage - 1);
+                nextDate.setDate(nextDate.getDate() + 1);
+            } else {
+                stage = 0;
+                nextDate.setMinutes(nextDate.getMinutes() + 5);
+            }
+
+            await updateDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'vocabulary', wordId), {
+                srsStage: stage,
+                nextReview: Timestamp.fromDate(nextDate)
+            });
+
+            const queue = getDueWords();
+            if (state.currentCardIndex < queue.length - 1) {
+                state.currentCardIndex++;
+                state.showAnswer = false;
+            } else {
+                state.activeTab = 'list';
+                state.currentCardIndex = 0;
+                state.showAnswer = false;
+            }
+            render();
+        };
+
+        window.deleteWord = async (id) => {
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'vocabulary', id));
+        };
+
+        window.setActiveBook = (id) => {
+            state.activeBookId = id;
+            state.activeTab = 'list';
+            render();
+        };
+
+        window.setTab = (tab) => {
+            state.activeTab = tab;
+            render();
+        };
+
+        window.startStudy = () => {
+            state.activeTab = 'study';
+            state.currentCardIndex = 0;
+            state.showAnswer = false;
+            render();
+        };
+
+        window.flipCard = () => {
+            state.showAnswer = true;
+            render();
+        };
+
+        window.showPreview = (id) => {
+            state.previewWord = state.words.find(w => w.id === id);
+            render();
+        };
+
+        window.closePreview = () => {
+            state.previewWord = null;
+            render();
+        };
+
+        window.speak = (text) => {
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'ru-RU';
+            window.speechSynthesis.speak(u);
+        };
+
+        function getDueWords() {
+            const now = new Date();
+            const list = state.activeBookId ? state.words.filter(w => w.bookId === state.activeBookId) : state.words;
+            return list.filter(w => !w.nextReview || w.nextReview.toDate() <= now)
+                       .sort((a,b) => a.nextReview?.toMillis() - b.nextReview?.toMillis());
+        }
+
+        // 启动应用
+        init();
+
+    </script>
     <style>
-        :root {
-            --indigo: #4f46e5;
-            --emerald: #10b981;
-            --amber: #f59e0b;
-            --rose: #f43f5e;
-            --slate-50: #f8fafc;
-            --slate-200: #e2e8f0;
-            --slate-800: #1e293b;
-        }
-
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--slate-50);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: var(--slate-800);
-        }
-
-        .app-container {
-            width: 100%;
-            max-width: 450px;
-            background: white;
-            padding: 24px;
-            border-radius: 32px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-
-        h1 { font-size: 20px; font-weight: 800; margin: 0; }
-
-        .stat-badge {
-            background: #eef2ff;
-            color: var(--indigo);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-        /* 输入框样式 */
-        .input-box {
-            background: var(--slate-50);
-            border-radius: 20px;
-            padding: 16px;
-            margin-bottom: 24px;
-        }
-
-        input {
-            width: 100%;
-            border: none;
-            background: transparent;
-            font-size: 16px;
-            font-weight: 700;
-            outline: none;
-            padding: 8px 0;
-            box-sizing: border-box;
-        }
-
-        .btn-add {
-            width: 100%;
-            background: var(--indigo);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 16px;
-            font-weight: 800;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-
-        /* 单词卡片样式 */
-        .card {
-            background: white;
-            border: 1px solid var(--slate-200);
-            border-radius: 24px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.2s;
-        }
-
-        .russian-word {
-            font-family: 'Times New Roman', serif;
-            font-size: 26px;
-            font-weight: 900;
-            color: var(--indigo);
-        }
-
-        .meaning {
-            font-size: 16px;
-            color: #64748b;
-            margin: 8px 0;
-            font-weight: 600;
-        }
-
-        /* 记忆按钮组 */
-        .action-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin-top: 16px;
-        }
-
-        .btn-sm {
-            border: none;
-            padding: 10px 4px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 800;
-            color: white;
-            cursor: pointer;
-        }
-
-        .btn-red { background: var(--rose); }
-        .btn-orange { background: var(--amber); }
-        .btn-green { background: var(--emerald); }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 0;
-            color: #94a3b8;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .russian-text { font-family: 'Times New Roman', serif; letter-spacing: 0.01em; }
+        ::-webkit-scrollbar { display: none; }
+        .animate-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
-
-<div class="app-container">
-    <header>
-        <h1>🇷🇺 俄语单词宝</h1>
-        <div class="stat-badge" id="dueCount">待复习: 0</div>
-    </header>
-
-    <div class="input-box">
-        <input type="text" id="wordIn" placeholder="输入单词 (如: учусь)">
-        <input type="text" id="transIn" placeholder="中文翻译">
-        <button class="btn-add" onclick="addWord()">添加并识别原型</button>
+    <div id="app">
+        <div class="flex items-center justify-center h-screen text-indigo-600 font-bold">正在载入应用...</div>
     </div>
-
-    <div id="reviewList">
-        </div>
-</div>
-
-<script>
-    // 艾宾浩斯间隔（分钟）: 5, 30, 12h, 1d, 2d, 4d, 7d, 15d
-    const INTERVALS = [5, 30, 720, 1440, 2880, 5760, 10080, 21600];
-    
-    let db = JSON.parse(localStorage.getItem('ru_vocab_v4') || '[]');
-
-    // 简化的原型识别（用于演示，可替换为 API）
-    function lemmatize(word) {
-        let w = word.toLowerCase().trim();
-        // 模拟识别：如果输入变体，返回带重音的原型
-        if (w === 'учусь') return 'учи\u0301ться';
-        if (w === 'книгу') return 'кни\u0301га';
-        return w; 
-    }
-
-    function addWord() {
-        const wordVal = document.getElementById('wordIn').value;
-        const transVal = document.getElementById('transIn').value;
-        if (!wordVal) return;
-
-        const wordObj = {
-            id: Date.now(),
-            word: lemmatize(wordVal),
-            translation: transVal || "暂无释义",
-            level: 0,
-            nextReview: Date.now() 
-        };
-
-        db.push(wordObj);
-        saveAndRender();
-        document.getElementById('wordIn').value = '';
-        document.getElementById('transIn').value = '';
-    }
-
-    function handleMemory(id, type) {
-        const item = db.find(w => w.id === id);
-        const now = Date.now();
-
-        if (type === 'master') {
-            item.level = Math.min(item.level + 1, INTERVALS.length - 1);
-            item.nextReview = now + (INTERVALS[item.level] * 60000);
-        } else if (type === 'unsure') {
-            item.level = Math.max(0, item.level - 1);
-            item.nextReview = now + (1440 * 60000); // 1天后
-        } else {
-            item.level = 0;
-            item.nextReview = now + (5 * 60000); // 5分钟后
-        }
-
-        saveAndRender();
-    }
-
-    function saveAndRender() {
-        localStorage.setItem('ru_vocab_v4', JSON.stringify(db));
-        render();
-    }
-
-    function render() {
-        const list = document.getElementById('reviewList');
-        const now = Date.now();
-        const dueWords = db.filter(w => w.nextReview <= now);
-        
-        document.getElementById('dueCount').innerText = `待复习: ${dueWords.length}`;
-
-        if (dueWords.length === 0) {
-            list.innerHTML = `<div class="empty-state">🎉 太棒了！<br>目前没有待复习的单词。</div>`;
-            return;
-        }
-
-        list.innerHTML = dueWords.map(w => `
-            <div class="card">
-                <div class="russian-word">${w.word}</div>
-                <div class="meaning">${w.translation}</div>
-                <div class="action-group">
-                    <button class="btn-sm btn-red" onclick="handleMemory(${w.id}, 'forget')">不熟(5分后)</button>
-                    <button class="btn-sm btn-orange" onclick="handleMemory(${w.id}, 'unsure')">不确定(1天后)</button>
-                    <button class="btn-sm btn-green" onclick="handleMemory(${w.id}, 'master')">掌握(升级)</button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // 初始化渲染
-    render();
-    // 每分钟检查一次是否有新的“5分钟复习”到期
-    setInterval(render, 60000);
-</script>
-
 </body>
 </html>
