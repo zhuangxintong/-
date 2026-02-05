@@ -1,224 +1,355 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>俄语单词宝 - 艾宾浩斯专业版</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #4f46e5;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #f43f5e;
-            --bg: #f8fafc;
-        }
+import React, { useState, useEffect, useMemo } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from 'firebase/auth';
+import { 
+  initializeFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  onSnapshot, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  addDoc 
+} from 'firebase/firestore';
+import { 
+  Plus, 
+  BookOpen, 
+  CheckCircle, 
+  XCircle, 
+  HelpCircle, 
+  Brain, 
+  Trash2, 
+  Loader2, 
+  Cloud, 
+  TrendingUp,
+  Info,
+  WifiOff
+} from 'lucide-react';
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 15px;
-            display: flex;
-            justify-content: center;
-        }
+// --- Firebase 配置 ---
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-        .app-card {
-            width: 100%;
-            max-width: 480px;
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            padding: 20px;
-            min-height: 80vh;
-        }
+// 使用 initializeFirestore 并开启 experimentalForceLongPolling 以解决连接失败问题 (code=unavailable)
+const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+});
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'ru-vocab-pro';
 
-        .badge {
-            background: #eef2ff;
-            color: var(--primary);
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-weight: 800;
-            font-size: 13px;
-        }
+// --- 艾宾浩斯复习间隔 (分钟) ---
+const SRS_STAGES = [5, 30, 720, 1440, 2880, 5760, 10080]; 
 
-        /* 输入区域 */
-        .input-section {
-            background: #f1f5f9;
-            padding: 15px;
-            border-radius: 18px;
-            margin-bottom: 20px;
-        }
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [words, setWords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [inputRu, setInputRu] = useState('');
+  const [inputCn, setInputCn] = useState('');
+  const [view, setView] = useState('review'); // 'review' | 'list'
+  const [isOffline, setIsOffline] = useState(false);
 
-        input {
-            width: 100%;
-            border: none;
-            background: transparent;
-            font-size: 16px;
-            padding: 8px 0;
-            outline: none;
-            font-weight: 600;
-        }
-
-        .btn-main {
-            width: 100%;
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 12px;
-            font-weight: bold;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-
-        /* 单词卡片 */
-        .vocab-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 12px;
-        }
-
-        .ru-text {
-            font-family: 'Times New Roman', serif;
-            font-size: 24px;
-            font-weight: 800;
-            color: var(--primary);
-        }
-
-        .btns {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin-top: 15px;
-        }
-
-        .btns button {
-            border: none;
-            padding: 8px;
-            border-radius: 8px;
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .btn-bad { background: var(--error); }
-        .btn-mid { background: var(--warning); }
-        .btn-good { background: var(--success); }
-
-        .empty {
-            text-align: center;
-            padding: 50px 0;
-            color: #94a3b8;
-        }
-    </style>
-</head>
-<body>
-
-<div class="app-card">
-    <div class="header">
-        <h2 style="margin:0">🇷🇺 单词宝</h2>
-        <div class="badge" id="dueCounter">待复习: 0</div>
-    </div>
-
-    <div class="input-section">
-        <input type="text" id="ruInput" placeholder="输入俄语单词 (如: учусь)">
-        <input type="text" id="cnInput" placeholder="中文翻译">
-        <button class="btn-main" onclick="saveWord()">添加并识别原型</button>
-    </div>
-
-    <div id="mainList"></div>
-</div>
-
-<script>
-    // 艾宾浩斯逻辑
-    const STEPS = [5, 30, 720, 1440, 2880, 5760, 10080]; // 分钟
-    let data = JSON.parse(localStorage.getItem('ru_v3_data') || '[]');
-
-    // 自动重音标记模拟 (可以在此处以后扩展 AI API)
-    function autoAccent(word) {
-        let w = word.toLowerCase().trim();
-        // 简单模拟: 常见的词尾识别
-        return w.replace('u', 'u\u0301').replace('a', 'a\u0301');
-    }
-
-    function saveWord() {
-        const ru = document.getElementById('ruInput').value;
-        const cn = document.getElementById('cnInput').value;
-        if(!ru) return;
-
-        const newItem = {
-            id: Date.now(),
-            word: autoAccent(ru),
-            meaning: cn || "未备注",
-            level: 0,
-            next: Date.now()
-        };
-
-        data.push(newItem);
-        update();
-        document.getElementById('ruInput').value = '';
-        document.getElementById('cnInput').value = '';
-    }
-
-    function handleSRS(id, type) {
-        const item = data.find(x => x.id === id);
-        const now = Date.now();
-
-        if (type === 'good') {
-            item.level = Math.min(item.level + 1, STEPS.length - 1);
-            item.next = now + (STEPS[item.level] * 60000);
-        } else if (type === 'mid') {
-            item.next = now + (1440 * 60000); // 1天后
+  // 1. 初始化认证 (遵守 RULE 3: 必须先 Auth)
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
         } else {
-            item.level = 0;
-            item.next = now + (5 * 60000); // 5分钟后循环
+          await signInAnonymously(auth);
         }
-        update();
+      } catch (err) {
+        console.error("Auth error:", err);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (!u) setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 2. 实时监听数据 (遵守 RULE 1 & RULE 2)
+  useEffect(() => {
+    if (!user) return;
+    
+    // 使用 Rule 1 要求的路径
+    const q = collection(db, 'artifacts', appId, 'users', user.uid, 'vocabulary');
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = [];
+      snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+      setWords(list);
+      setLoading(false);
+      setIsOffline(false);
+    }, (error) => {
+      console.error("Firestore error:", error);
+      if (error.code === 'unavailable') {
+        setIsOffline(true);
+      }
+      setLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [user]);
+
+  // 3. AI 识别原型与重音
+  const analyzeWord = async (word) => {
+    const apiKey = ""; // 运行时自动注入
+    const prompt = `你是一个俄语专家。分析单词 "${word}"。
+    请返回 JSON 格式：
+    {
+      "accented": "带重音符号的单词",
+      "lemma": "单词原形",
+      "pos": "词性",
+      "grammar": "简短语法说明"
+    }`;
+
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: "application/json" }
+        })
+      });
+      const result = await response.json();
+      return JSON.parse(result.candidates[0].content.parts[0].text);
+    } catch (e) {
+      return { accented: word, lemma: word, pos: '未知', grammar: '' };
+    }
+  };
+
+  // 4. 添加单词
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    if (!inputRu || !user) return;
+    setAdding(true);
+
+    const aiInfo = await analyzeWord(inputRu);
+    
+    try {
+      const colRef = collection(db, 'artifacts', appId, 'users', user.uid, 'vocabulary');
+      await addDoc(colRef, {
+        word: aiInfo.accented,
+        lemma: aiInfo.lemma,
+        pos: aiInfo.pos,
+        grammar: aiInfo.grammar,
+        meaning: inputCn || "未填写",
+        level: 0,
+        nextReview: Date.now(),
+        createdAt: Date.now()
+      });
+      setInputRu('');
+      setInputCn('');
+    } catch (err) {
+      console.error("Add failed:", err);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  // 5. 复习逻辑
+  const handleReview = async (id, quality) => {
+    const word = words.find(w => w.id === id);
+    if (!word || !user) return;
+
+    let nextLevel = word.level;
+    let nextDate = Date.now();
+
+    if (quality === 'good') {
+      nextLevel = Math.min(word.level + 1, SRS_STAGES.length - 1);
+      nextDate = Date.now() + SRS_STAGES[nextLevel] * 60000;
+    } else if (quality === 'mid') {
+      nextDate = Date.now() + 1440 * 60000; // 1天后
+    } else {
+      nextLevel = 0;
+      nextDate = Date.now() + 5 * 60000; // 5分钟后
     }
 
-    function update() {
-        localStorage.setItem('ru_v3_data', JSON.stringify(data));
-        render();
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'vocabulary', id);
+      await updateDoc(docRef, {
+        level: nextLevel,
+        nextReview: nextDate
+      });
+    } catch (err) {
+      console.error("Update failed:", err);
     }
+  };
 
-    function render() {
-        const list = document.getElementById('mainList');
-        const now = Date.now();
-        const due = data.filter(x => x.next <= now);
-        
-        document.getElementById('dueCounter').innerText = `待复习: ${due.length}`;
+  const handleDelete = async (id) => {
+    if (!user) return;
+    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'vocabulary', id);
+    await deleteDoc(docRef);
+  };
 
-        if(due.length === 0) {
-            list.innerHTML = '<div class="empty">🎉 暂时没有待复习单词！<br>去添加一些新词吧。</div>';
-            return;
-        }
+  // 筛选待复习
+  const dueWords = useMemo(() => {
+    return words.filter(w => w.nextReview <= Date.now()).sort((a, b) => a.nextReview - b.nextReview);
+  }, [words]);
 
-        list.innerHTML = due.map(item => `
-            <div class="vocab-card">
-                <div class="ru-text">${item.word}</div>
-                <div style="color:#64748b; margin-top:5px">${item.meaning}</div>
-                <div class="btns">
-                    <button class="btn-bad" onclick="handleSRS(${item.id}, 'bad')">不熟</button>
-                    <button class="btn-mid" onclick="handleSRS(${item.id}, 'mid')">模糊</button>
-                    <button class="btn-good" onclick="handleSRS(${item.id}, 'good')">掌握</button>
-                </div>
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+        <p className="mt-4 text-slate-500 font-medium">正在同步云端数据...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-md mx-auto min-h-screen bg-white shadow-2xl flex flex-col font-sans">
+      {/* 离线警告 */}
+      {isOffline && (
+        <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-center gap-2 text-xs font-bold animate-pulse">
+          <WifiOff className="w-3 h-3" />
+          无法连接至云端，目前处于离线模式
+        </div>
+      )}
+
+      {/* 顶部导航 */}
+      <header className="p-6 border-b bg-white sticky top-0 z-10">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-indigo-600 rounded-xl">
+              <BookOpen className="w-6 h-6 text-white" />
             </div>
-        `).join('');
-    }
+            <h1 className="text-xl font-extrabold text-slate-800">俄语单词宝</h1>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-sm font-bold">
+            <TrendingUp className="w-4 h-4" />
+            待复习: {dueWords.length}
+          </div>
+        </div>
 
-    render();
-    setInterval(render, 30000); // 每30秒自动检测一次任务
-</script>
+        <nav className="flex gap-2">
+          <button 
+            onClick={() => setView('review')}
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${view === 'review' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}
+          >
+            复习
+          </button>
+          <button 
+            onClick={() => setView('list')}
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${view === 'list' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}
+          >
+            词库
+          </button>
+        </nav>
+      </header>
 
-</body>
-</html>
+      <main className="flex-1 overflow-y-auto p-4 bg-slate-50">
+        {view === 'review' && (
+          <div className="space-y-4">
+            {dueWords.length > 0 ? (
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">当前任务</span>
+                  <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">等级 {dueWords[0].level}</span>
+                </div>
+                <h2 className="text-4xl font-serif font-bold text-slate-800 my-6 text-center select-all">
+                  {dueWords[0].word}
+                </h2>
+                
+                <div className="p-4 bg-slate-50 rounded-2xl mb-6">
+                  <p className="text-center text-slate-600 font-medium text-lg">{dueWords[0].meaning}</p>
+                  {dueWords[0].grammar && (
+                    <p className="text-center text-indigo-500 text-xs mt-2 italic">
+                      <Info className="w-3 h-3 inline mr-1" />
+                      {dueWords[0].pos}: {dueWords[0].grammar}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <button onClick={() => handleReview(dueWords[0].id, 'bad')} className="flex flex-col items-center gap-1 p-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-2xl transition group">
+                    <XCircle className="w-6 h-6 group-active:scale-90" />
+                    <span className="text-xs font-bold">不熟</span>
+                  </button>
+                  <button onClick={() => handleReview(dueWords[0].id, 'mid')} className="flex flex-col items-center gap-1 p-3 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-2xl transition group">
+                    <HelpCircle className="w-6 h-6 group-active:scale-90" />
+                    <span className="text-xs font-bold">模糊</span>
+                  </button>
+                  <button onClick={() => handleReview(dueWords[0].id, 'good')} className="flex flex-col items-center gap-1 p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-2xl transition group">
+                    <CheckCircle className="w-6 h-6 group-active:scale-90" />
+                    <span className="text-xs font-bold">掌握</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-20">
+                <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Brain className="w-10 h-10 text-indigo-500" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">全部清空！</h3>
+                <p className="text-slate-500 mt-2">艾宾浩斯记忆库已更新，请稍后再来。</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {view === 'list' && (
+          <div className="space-y-4">
+            <form onSubmit={handleAdd} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+              <div className="flex flex-col gap-2">
+                <input 
+                  value={inputRu}
+                  onChange={e => setInputRu(e.target.value)}
+                  placeholder="输入俄语单词 (如: учусь)"
+                  className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-lg font-medium outline-none"
+                />
+                <input 
+                  value={inputCn}
+                  onChange={e => setInputCn(e.target.value)}
+                  placeholder="中文翻译 (选填)"
+                  className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+                <button 
+                  type="submit"
+                  disabled={adding || !inputRu}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
+                >
+                  {adding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                  AI 智能添加
+                </button>
+              </div>
+            </form>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold text-slate-400 px-2 uppercase tracking-widest">最近学习 ({words.length})</h3>
+              {words.slice().sort((a,b) => b.createdAt - a.createdAt).map(word => (
+                <div key={word.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center group">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-serif font-bold text-slate-800">{word.word}</span>
+                      <span className="text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded uppercase">{word.pos}</span>
+                    </div>
+                    <p className="text-sm text-slate-500">{word.meaning}</p>
+                  </div>
+                  <button onClick={() => handleDelete(word.id)} className="p-2 text-slate-300 hover:text-rose-500 transition opacity-0 group-hover:opacity-100">
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer className="p-4 bg-white border-t text-center text-[10px] text-slate-400">
+        <div className="flex justify-center items-center gap-4 mb-1">
+          <span className="flex items-center gap-1"><Cloud className="w-3 h-3 text-emerald-400" /> 云端同步中</span>
+          <span className="flex items-center gap-1"><Brain className="w-3 h-3 text-indigo-400" /> AI 专家系统</span>
+        </div>
+        艾宾浩斯遗忘曲线引擎 v4.1 • 修复连接稳定性
+      </footer>
+    </div>
+  );
+}
