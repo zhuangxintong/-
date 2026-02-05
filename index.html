@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>俄语智能记忆助手 - ITMO Pro 最终版</title>
+    <title>俄语智能记忆助手 - ITMO Pro 纯本地稳定版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans:wght@400;700&display=swap');
@@ -23,8 +23,8 @@
             line-height: 1.6;
         }
 
-        /* 翻转卡片布局 */
-        .flip-card { perspective: 1200px; height: 620px; width: 100%; max-width: 480px; }
+        /* 翻转卡片自适应布局：确保内容与按钮隔离 */
+        .flip-card { perspective: 1200px; height: 600px; width: 100%; max-width: 480px; }
         .flip-card-inner {
             position: relative; width: 100%; height: 100%;
             transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -60,7 +60,7 @@
 
         .loading-spinner {
             border: 3px solid #f1f5f9; border-top: 3px solid #6366f1;
-            border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite;
+            border-radius: 50%; width: 22px; height: 24px; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -87,8 +87,8 @@
             <div class="inline-flex items-center gap-2 bg-white/60 px-4 py-1.5 rounded-full border border-white mb-8 shadow-sm">
                 <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest italic leading-none">ITMO Pure Local Mode</span>
             </div>
-            <h1 class="text-6xl font-black text-slate-900 tracking-tighter mb-2 italic uppercase leading-none">Привет!</h1>
-            <p class="text-slate-400 text-sm font-medium tracking-tight">AI 原型还原 · 本地极速存储</p>
+            <h1 class="text-6xl font-black text-slate-900 tracking-tighter mb-2 italic uppercase leading-none italic">Привет!</h1>
+            <p class="text-slate-400 text-sm font-medium tracking-tight">AI 原型还原 · 本地存储</p>
         </header>
         
         <div id="user-list-container">
@@ -102,7 +102,7 @@
             </div>
             <div class="mt-8 flex items-center justify-center gap-3">
                 <div class="status-indicator online"></div>
-                <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest italic leading-none">Local Data Ready</p>
+                <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest italic leading-none">Local Mode Active</p>
             </div>
         </div>
     </div>
@@ -110,20 +110,20 @@
     <!-- 2. 主界面 -->
     <div id="view-home" class="hidden w-full max-w-md main-container space-y-6">
         <header class="flex justify-between items-center py-4">
-            <div class="text-left text-left text-left">
+            <div class="text-left text-left">
                 <h2 id="current-user-name" class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none text-left">用户</h2>
-                <div class="flex items-center gap-2 mt-2">
+                <div class="flex items-center gap-2 mt-2 text-left">
                     <span id="target-display" class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest leading-none">每日计划: 50 词</span>
                 </div>
             </div>
             <div class="flex gap-2">
-                <button onclick="location.reload()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-400 text-[10px] font-black tracking-widest uppercase active:scale-95 transition-all">切换档案</button>
+                <button onclick="location.reload()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-400 text-[10px] font-black tracking-widest uppercase active:scale-95 transition-all">登出</button>
             </div>
         </header>
 
         <div class="bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm text-left">
             <div class="flex justify-between items-center mb-6">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic">设定复习目标</label>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic">设定复习强度</label>
                 <span id="slider-val" class="text-xl font-black text-indigo-600 italic leading-none">50 词</span>
             </div>
             <input type="range" id="daily-target-slider" min="1" max="200" value="50" class="w-full">
@@ -133,7 +133,7 @@
             <div class="relative z-10 text-left">
                 <p class="text-indigo-200 text-[10px] font-black uppercase tracking-widest mb-1 italic leading-none">Intelligent Scheduler</p>
                 <h3 id="due-count" class="text-4xl font-black text-white leading-tight italic tracking-tighter text-left">0 词计划中</h3>
-                <div id="plan-breakdown" class="text-[10px] text-indigo-100 mt-2 font-medium opacity-80 italic tracking-wide text-left text-left">准备就绪...</div>
+                <div id="plan-breakdown" class="text-[10px] text-indigo-100 mt-2 font-medium opacity-80 italic tracking-wide text-left text-left">离线引擎已就绪...</div>
                 <button onclick="window.startSmartSession()" id="start-due-btn" class="mt-8 bg-white text-indigo-700 px-8 py-4 rounded-[1.5rem] text-sm font-black shadow-xl active:scale-95 transition-all uppercase tracking-widest">开始今日任务</button>
             </div>
             <svg class="absolute right-[-30px] bottom-[-30px] opacity-10" width="180" height="180" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
@@ -142,17 +142,17 @@
         <div id="library-list" class="space-y-4 text-left"></div>
 
         <button onclick="window.showCreateView()" class="w-full py-6 bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] text-slate-500 font-black hover:border-indigo-500 hover:text-indigo-600 transition-all uppercase tracking-widest text-sm active:scale-95 shadow-sm">
-            + 管理或录入本地词库
+            + 管理或录入词库
         </button>
     </div>
 
     <!-- 3. 学习模式 (双向 Recall) -->
     <div id="view-learn" class="hidden w-full max-w-md main-container min-h-[85vh] flex flex-col items-center">
-        <header class="w-full flex justify-between items-center py-6 px-2">
-            <button onclick="window.showHomeView()" class="px-5 py-2.5 bg-white rounded-2xl border border-slate-100 text-slate-900 font-black text-[10px] shadow-sm tracking-widest uppercase">返回主页</button>
-            <div class="text-center">
-                <p id="learn-progress" class="text-xl font-black text-slate-900 tracking-tighter leading-none">0 / 0</p>
-                <p id="learn-mode-text" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mt-1 italic">Bidirectional Mode</p>
+        <header class="w-full flex justify-between items-center py-6 px-2 text-left">
+            <button onclick="window.showHomeView()" class="px-5 py-2.5 bg-white rounded-2xl border border-slate-100 text-slate-900 font-black text-[10px] shadow-sm tracking-widest uppercase">主页</button>
+            <div class="text-center text-center">
+                <p id="learn-progress" class="text-xl font-black text-slate-900 tracking-tighter leading-none text-left">0 / 0</p>
+                <p id="learn-mode-text" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mt-1 italic">Active Session</p>
             </div>
             <div class="w-12"></div>
         </header>
@@ -163,39 +163,40 @@
                     <span id="card-front-hint" class="text-slate-400 text-[10px] uppercase font-black mb-12 tracking-widest opacity-60 italic text-center leading-none tracking-tight">想一想它的释义 · 点击翻转</span>
                     <div id="word-display" class="russian-text text-5xl font-black text-slate-800 mb-16 text-center leading-tight tracking-tighter italic">...</div>
                     
+                    <!-- 垂直布局防遮挡 -->
                     <div class="w-full flex flex-col gap-4 mt-auto" onclick="event.stopPropagation()">
-                        <button onclick="window.submitReview(3)" class="w-full bg-emerald-500 text-white py-5 rounded-[2rem] font-black shadow-xl active:scale-95 transition-all text-sm tracking-widest uppercase leading-none">掌握了 (稳步前进)</button>
+                        <button onclick="window.submitReview(3)" class="w-full bg-emerald-500 text-white py-5 rounded-[2rem] font-black shadow-xl active:scale-95 transition-all text-sm tracking-widest uppercase leading-none">掌握了 (推迟复习)</button>
                         <div class="grid grid-cols-2 gap-4">
-                            <button onclick="window.flipCard(event)" class="bg-amber-50 text-amber-700 py-4.5 rounded-[1.5rem] font-black border border-amber-100 active:scale-95 transition-all text-xs tracking-widest leading-none">记不清</button>
-                            <button onclick="window.flipCard(event)" class="bg-rose-50 text-rose-700 py-4.5 rounded-[1.5rem] font-black border border-rose-100 active:scale-95 transition-all text-xs tracking-widest leading-none">忘了</button>
+                            <button onclick="window.flipCard(event)" class="bg-amber-50 text-amber-700 py-4.5 rounded-[1.5rem] font-black border border-amber-100 active:scale-95 transition-all text-xs tracking-widest leading-none">不熟</button>
+                            <button onclick="window.flipCard(event)" class="bg-rose-50 text-rose-700 py-4.5 rounded-[1.5rem] font-black border border-rose-100 active:scale-95 transition-all text-xs tracking-widest leading-none">记不住</button>
                         </div>
                     </div>
                 </div>
                 <div class="flip-card-back flex flex-col p-8 text-left">
                     <div class="flex-1 overflow-y-auto pr-1 hide-scrollbar">
-                        <div class="mb-6 text-left text-left">
+                        <div class="mb-6 text-left text-left text-left">
                             <div class="flex items-center gap-3">
-                                <p id="word-back" class="russian-text text-3xl font-black text-indigo-600 tracking-tighter leading-tight italic">...</p>
+                                <p id="word-back" class="russian-text text-3xl font-black text-indigo-600 tracking-tighter leading-tight italic text-left">...</p>
                                 <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].word)" class="p-2.5 bg-indigo-50 text-indigo-600 rounded-full active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
                             </div>
-                            <p id="meaning-back" class="text-xl font-bold text-slate-900 mt-2 font-black leading-tight italic">...</p>
+                            <p id="meaning-back" class="text-xl font-bold text-slate-900 mt-2 font-black leading-tight italic text-left text-left">...</p>
                         </div>
-                        <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 mb-6 text-left">
+                        <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 mb-6 text-left text-left">
                             <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.1em] mb-1 italic leading-none">语法背景与原型</p>
                             <p id="grammar-back" class="text-[13px] text-slate-700 leading-relaxed font-medium italic">...</p>
                         </div>
-                        <div class="mb-10 text-left">
+                        <div class="mb-10 text-left text-left text-left">
                             <div class="flex items-center gap-2 mb-3 text-left">
                                 <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].example)" class="p-2 bg-indigo-50 text-indigo-600 rounded-full scale-75 origin-left"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
-                                <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none tracking-widest leading-none">经典例句</span>
+                                <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none tracking-widest leading-none">场景造句</span>
                             </div>
-                            <p id="example-back" class="russian-text text-[15px] italic text-slate-700 leading-snug font-bold">...</p>
+                            <p id="example-back" class="russian-text text-[15px] italic text-slate-700 leading-snug font-bold text-left">...</p>
                             <p id="example-cn-back" class="text-xs text-slate-400 mt-3 font-medium italic text-left">...</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4 pt-4 mt-auto">
                         <button onclick="window.submitReview(1)" class="bg-slate-100 text-slate-600 py-5 rounded-[1.8rem] font-black active:scale-95 text-xs tracking-widest uppercase">再背一次</button>
-                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-5 rounded-[1.8rem] font-black active:scale-95 shadow-xl shadow-indigo-100 text-xs tracking-widest leading-none uppercase">记住了</button>
+                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-5 rounded-[1.8rem] font-black active:scale-95 shadow-xl shadow-indigo-100 text-xs tracking-widest leading-none">记住了</button>
                     </div>
                 </div>
             </div>
@@ -204,42 +205,42 @@
 
     <!-- 4. 词库清单界面 (眼睛图标) -->
     <div id="view-word-list" class="hidden w-full max-w-md main-container space-y-6 pb-12 text-left">
-        <header class="flex items-center gap-4 py-8 text-left text-left text-left">
+        <header class="flex items-center gap-4 py-8 text-left text-left">
             <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm active:scale-90 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
-            <div class="text-left">
-                <h2 id="word-list-title" class="text-2xl font-black text-slate-900 tracking-tighter italic leading-none text-left italic">词库清单</h2>
-                <p id="word-list-count" class="text-[11px] text-indigo-500 font-bold uppercase tracking-widest mt-2 italic text-left leading-none italic">Vocabulary</p>
+            <div class="text-left text-left text-left">
+                <h2 id="word-list-title" class="text-2xl font-black text-slate-900 tracking-tighter italic leading-none text-left italic">词库内容</h2>
+                <p id="word-list-count" class="text-[11px] text-indigo-500 font-bold uppercase tracking-widest mt-2 italic text-left leading-none italic text-left">Vocabulary List</p>
             </div>
         </header>
         <div id="word-list-container" class="space-y-3"></div>
     </div>
 
-    <!-- 5. 内容编辑器 -->
+    <!-- 5. 内容编辑器 (AI 深度分析) -->
     <div id="view-create" class="hidden w-full max-w-md main-container space-y-6 pb-12 text-left">
-        <header class="flex items-center gap-4 py-8 text-left text-left">
+        <header class="flex items-center gap-4 py-8 text-left text-left text-left">
             <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
-            <h2 class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none text-left">内容管理</h2>
+            <h2 class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none text-left">词库管理</h2>
         </header>
         <div class="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl shadow-indigo-100/10 text-left">
-            <div class="mb-8 text-left text-left">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic text-left">词库标题</label>
-                <input id="create-lib-name" type="text" placeholder="例如：医学俄语、日常口语" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none font-black text-slate-800 text-left">
+            <div class="mb-8 text-left text-left text-left">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic">词库标题</label>
+                <input id="create-lib-name" type="text" placeholder="例如：日常生活常用词" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none font-black text-slate-800 text-left">
             </div>
-            <div class="relative text-left">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic text-left text-left">AI 智能解析 (录入变体词自动识别原型并标重音)</label>
+            <div class="relative text-left text-left text-left">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic text-left text-left">AI 智能解析 (自动溯源原型并标重音)</label>
                 <div class="flex gap-3 text-left">
-                    <input id="ai-word-input" type="text" placeholder="输入单词(如 читаю, книгами)..." class="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold text-left">
+                    <input id="ai-word-input" type="text" placeholder="输入单词 (如 читаю, книгами)..." class="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold text-left">
                     <button id="ai-gen-btn" onclick="window.generateWord()" class="bg-indigo-600 text-white px-7 py-4 rounded-2xl font-black btn-active shadow-lg">录入</button>
                 </div>
-                <div id="ai-status" class="hidden mt-4 flex items-center gap-3 text-xs text-indigo-600 font-black italic"><div class="loading-spinner scale-50"></div> AI 正在智能识别并分析变位细节...</div>
+                <div id="ai-status" class="hidden mt-4 flex items-center gap-3 text-xs text-indigo-600 font-black italic"><div class="loading-spinner scale-50"></div> 正在精准提取语义详情...</div>
             </div>
         </div>
         <div id="temp-words" class="space-y-4 max-h-[35vh] overflow-y-auto pr-2 mt-4 hide-scrollbar"></div>
-        <button onclick="window.saveLibraryAction()" id="save-lib-btn" class="w-full bg-slate-900 text-white py-6 rounded-[2.2rem] font-black shadow-2xl hover:scale-[1.02] transition-all tracking-widest uppercase leading-none">保存到本地</button>
+        <button onclick="window.saveLibraryAction()" id="save-lib-btn" class="w-full bg-slate-900 text-white py-6 rounded-[2.2rem] font-black shadow-2xl hover:scale-[1.02] transition-all tracking-widest uppercase leading-none">保存至本地档案</button>
     </div>
 
     <script type="module">
-        const apiKey = ""; // Gemini Key handled by env
+        const apiKey = ""; // Gemini Key (系统运行时自动注入)
         
         let currentUserProfile = null;
         let allLibraries = [], userProgress = {};
@@ -249,7 +250,7 @@
         let wordDeleteRef = { libId: null, wordIndex: null };
         const STAGES = [0, 1, 2, 4, 7, 15, 30, 90, 180];
 
-        // --- 全局函数挂载 ---
+        // --- 全局交互函数挂载 (彻底修复 window.xxx is not defined) ---
         window.showToast = (msg) => {
             const el = document.getElementById('toast-msg');
             if(el) { el.innerText = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); }
@@ -308,59 +309,36 @@
         window.closeConfirmModal = () => document.getElementById('confirm-modal').classList.add('hidden');
         window.removeTempWord = (index) => { tempWordsForLib.splice(index, 1); window.renderTempWords(); };
 
-        // --- 深度 AI 原型还原引擎 ---
+        // --- AI 原型解析引擎 ---
         window.generateWord = async () => {
             const input = document.getElementById('ai-word-input');
             const word = input.value.trim(); if(!word) return;
             const btn = document.getElementById('ai-gen-btn');
             const status = document.getElementById('ai-status');
             btn.disabled = true; status.classList.remove('hidden');
-            
             try {
-                // Exponential Backoff Implementation
-                const callAI = async (retryCount = 0) => {
-                    const systemPrompt = `你是一位专业的 ITMO 俄语教师。请根据输入生成详细词条 JSON。
-                    逻辑：
-                    1. **还原原型(Lemma)**：如果输入是变位词/变格词，识别其原型并填入 "word"。
-                    2. **标重音**：在 "word" 重读元音后加 Unicode 重音符号 \\u0301。
-                    3. **极其详尽语法解析**：
-                       - 动词：注明体(完成/未完成)及体对。若是变体输入，说明“这是...的变位”。给出1,2,3人称单数变位。
-                       - 动名词：追溯其动词原型。
-                       - 短尾形容词：对应长尾原形。
-                       - 名词：性、数。
-                    4. 造典型句子，俄语单词全标重音。
-                    
-                    仅返回 JSON: {"word": "...", "meaning": "...", "grammar": "...", "example": "...", "exampleCn": "..."}`;
-                    
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: `输入单词: ${word}` }] }],
-                            systemInstruction: { parts: [{ text: systemPrompt }] },
-                            generationConfig: { responseMimeType: "application/json" }
-                        })
-                    });
-                    
-                    if (!response.ok && retryCount < 5) {
-                        const delay = Math.pow(2, retryCount) * 1000;
-                        await new Promise(r => setTimeout(r, delay));
-                        return callAI(retryCount + 1);
-                    }
-                    return response.json();
-                };
-
-                const res = await callAI();
+                const systemPrompt = `你是一位专业的 ITMO 俄语教师。请为提供的俄语输入生成详细的词条 JSON。
+                逻辑指令：
+                1. **原型还原(Lemma)**：如果输入词是变位词、变格形式，务必识别其原型词（如 читаю -> читать），并将其作为主词条 "word" 字段。
+                2. **标标注精准重音**：在 "word" 的原型重读元音后加 Unicode 重音符号 \\u0301 (如 хорошо́)。
+                3. **极其详尽语法解析**：
+                   - 动词：注明体(完成/未完成)及其对应的体对词。给出 1, 2, 3 人称单数变位。如果是变体输入的，要在开头注明“这是...的变位”。
+                   - 动名词：务必注明对应的动词原型。
+                   - 短尾形容词：对应长尾原形，写明性数。
+                   - 名词：性数。
+                4. 造典型例句，所有俄语单词标重音。
+                仅返回 JSON 格式数据: {"word": "原型词词条", "meaning": "含义", "grammar": "极其详尽语法解析", "example": "俄语例句", "exampleCn": "例句翻译"}`;
+                
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `词条: ${word}` }] }], systemInstruction: { parts: [{ text: systemPrompt }] }, generationConfig: { responseMimeType: "application/json" } })
+                });
+                const res = await resp.json();
                 const data = JSON.parse(res.candidates[0].content.parts[0].text);
-                tempWordsForLib.unshift(data);
-                window.renderTempWords();
-                input.value = '';
-            } catch(e) {
-                window.showToast("AI 解析失败，请重试");
-            } finally {
-                btn.disabled = false;
-                status.classList.add('hidden');
-            }
+                tempWordsForLib.unshift(data); window.renderTempWords(); input.value = '';
+            } catch(e) { window.showToast("AI 解析失败，请重试"); } 
+            finally { btn.disabled = false; status.classList.add('hidden'); }
         };
 
         window.saveLibraryAction = () => {
@@ -376,10 +354,10 @@
                 libs.push({ id: 'l_' + Date.now(), ...data });
             }
             
-            // 重要：同步内存变量并保存
+            // 重要：同步内存变量并刷新主页
             allLibraries = libs;
             localStorage.setItem('itmo_libs', JSON.stringify(libs));
-            window.showToast("本地保存成功");
+            window.showToast("保存成功");
             window.showHomeView();
         };
 
@@ -414,7 +392,7 @@
             const la = document.getElementById('plan-breakdown');
             if (actualCount === 0 && overdue.length === 0 && pool.length === 0) {
                 statusText.innerText = "库内无词";
-                la.innerText = "录入单词后开启复习";
+                la.innerText = "请录入单词或新建词库";
                 document.getElementById('start-due-btn').disabled = true;
             } else {
                 statusText.innerText = `${actualCount} 词计划中`;
@@ -438,7 +416,7 @@
             overduePool.sort((a, b) => b.p - a.p);
             let session = overduePool.map(o => o.w).slice(0, target);
             if (session.length < target) session = session.concat(unseenPool.slice(0, target - session.length));
-            if (session.length === 0) { window.showToast("今日暂无任务"); return; }
+            if (session.length === 0) { window.showToast("任务已清空"); return; }
             window.sessionWords = session.map(w => ({ ...w, mode: Math.random() > 0.5 ? 'RuToCn' : 'CnToRu' })).sort(() => Math.random() - 0.5);
             window.currentIndex = 0;
             document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden'));
@@ -482,7 +460,7 @@
             const locals = JSON.parse(localStorage.getItem('itmo_users') || '[]');
             list.innerHTML = '';
             if (locals.length === 0) {
-                list.innerHTML = `<div onclick="window.login('guest', '默认档案')" class="user-card p-12 rounded-[2.5rem] border-2 border-dashed border-indigo-100 flex flex-col items-center gap-2 cursor-pointer text-slate-300 italic font-black uppercase text-xs text-center">Create First Profile</div>`;
+                list.innerHTML = `<div onclick="window.login('guest', '默认档案')" class="user-card p-12 rounded-[2.5rem] border-2 border-dashed border-indigo-100 flex flex-col items-center gap-2 cursor-pointer text-slate-300 italic font-black uppercase text-xs text-center text-center">Create First Profile</div>`;
             } else { locals.forEach(u => renderUserItem(u.id, u.name)); }
         }
 
@@ -497,8 +475,8 @@
             renderUserList();
         };
 
-        function renderLibraryList() { const list = document.getElementById('library-list'); list.innerHTML = allLibraries.map(lib => `<div class="bg-white p-7 rounded-[2.8rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all text-left hover:border-indigo-200"><div onclick="window.startLearnLibrary('${lib.id}')" class="flex-1 cursor-pointer"><p class="font-black text-slate-800 russian-text italic text-2xl leading-tight text-left">${lib.name}</p><p class="text-[10px] text-slate-400 font-black mt-2 uppercase tracking-widest text-left">${lib.words.length} Vocabulary Items</p></div><div class="flex gap-2 text-left"><button onclick="window.viewLibraryWords('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button onclick="window.editLibrary('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div></div>`).join(''); }
-        window.viewLibraryWords = (id) => { const lib = allLibraries.find(l => l.id === id); if (!lib) return; const cont = document.getElementById('word-list-container'); document.getElementById('word-list-title').innerText = lib.name; document.getElementById('word-list-count').innerText = `Records: ${lib.words.length}`; cont.innerHTML = lib.words.map((w, i) => `<div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-between items-center text-left mb-1 transition-all hover:border-indigo-100"><div><p class="font-black text-slate-800 russian-text italic text-xl leading-tight tracking-tighter text-left leading-tight text-left">${w.word}</p><p class="text-xs text-slate-500 mt-2 font-medium text-left">${w.meaning}</p></div><div class="flex items-center gap-1 text-left"><button onclick="window.playStaticVoice('${w.word.replace(/\u0301/g, '')}')" class="p-3 bg-indigo-50 text-indigo-600 rounded-full active:scale-90 shadow-sm transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button><button onclick="window.showWordDeleteConfirm('${lib.id}', ${i}, '${w.word}')" class="p-3 text-rose-300 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>`).join(''); document.getElementById('view-home').classList.add('hidden'); document.getElementById('view-word-list').classList.remove('hidden'); };
+        function renderLibraryList() { const list = document.getElementById('library-list'); list.innerHTML = allLibraries.map(lib => `<div class="bg-white p-7 rounded-[2.8rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all text-left hover:border-indigo-200"><div onclick="window.startLearnLibrary('${lib.id}')" class="flex-1 cursor-pointer"><p class="font-black text-slate-800 russian-text italic text-2xl leading-tight text-left text-left text-left">${lib.name}</p><p class="text-[10px] text-slate-400 font-black mt-2 uppercase tracking-widest text-left text-left text-left">${lib.words.length} Vocabulary Items</p></div><div class="flex gap-2 text-left text-left text-left"><button onclick="window.viewLibraryWords('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button onclick="window.editLibrary('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div></div>`).join(''); }
+        window.viewLibraryWords = (id) => { const lib = allLibraries.find(l => l.id === id); if (!lib) return; const cont = document.getElementById('word-list-container'); document.getElementById('word-list-title').innerText = lib.name; document.getElementById('word-list-count').innerText = `Records: ${lib.words.length}`; cont.innerHTML = lib.words.map((w, i) => `<div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-between items-center text-left mb-1 transition-all hover:border-indigo-100"><div><p class="font-black text-slate-800 russian-text italic text-xl leading-tight tracking-tighter text-left text-left text-left leading-tight text-left text-left">${w.word}</p><p class="text-xs text-slate-500 mt-2 font-medium text-left text-left text-left text-left text-left">${w.meaning}</p></div><div class="flex items-center gap-1 text-left text-left text-left text-left text-left"><button onclick="window.playStaticVoice('${w.word.replace(/\u0301/g, '')}')" class="p-3 bg-indigo-50 text-indigo-600 rounded-full active:scale-90 shadow-sm transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button><button onclick="window.showWordDeleteConfirm('${lib.id}', ${i}, '${w.word}')" class="p-3 text-rose-300 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>`).join(''); document.getElementById('view-home').classList.add('hidden'); document.getElementById('view-word-list').classList.remove('hidden'); };
         window.showWordDeleteConfirm = (libId, wordIndex, wordText) => { deleteType = 'word'; wordDeleteRef = { libId, wordIndex }; document.getElementById('confirm-title').innerText = "移除该单词？"; document.getElementById('confirm-modal').classList.remove('hidden'); };
         window.playStaticVoice = (text) => { const clean = (text || "").replace(/\u0301/g, ''); const utter = new SpeechSynthesisUtterance(clean); utter.lang = 'ru-RU'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(utter); };
         window.startLearnLibrary = (id) => { const lib = allLibraries.find(l => l.id === id); if (!lib || lib.words.length === 0) return; window.sessionWords = [...lib.words].map(w=>({...w, mode: 'RuToCn'})).sort(() => Math.random() - 0.5); window.currentIndex = 0; document.getElementById('learn-progress').innerText = "1 / " + window.sessionWords.length; document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-learn').classList.remove('hidden'); renderCard(); };
@@ -520,7 +498,7 @@
             window.closeConfirmModal(); 
         };
 
-        function renderUserItem(id, name) { const list = document.getElementById('user-list'); const el = document.createElement('div'); el.className = "user-card p-6 pr-8 rounded-[2.5rem] flex justify-between items-center shadow-sm cursor-pointer mb-2"; el.innerHTML = `<div class="flex items-center gap-6 flex-1 text-left text-left" onclick="window.login('${id}', '${name}')"><div class="w-16 h-16 avatar-gradient rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl uppercase text-center text-center">${name[0]}</div><div><p class="font-black text-slate-800 text-xl tracking-tighter italic text-left leading-tight text-left text-left text-left text-left">${name}</p><span class="inline-block mt-1 px-3 py-1 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm leading-none tracking-widest text-left text-left">Standalone Mode</span></div></div><button class="delete-user-btn p-4 text-slate-200 hover:text-rose-500 transition-all rounded-[1.5rem] hover:bg-rose-50 active:rotate-12"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button>`; el.querySelector('.delete-user-btn').onclick = (e) => { e.stopPropagation(); deleteType = 'user'; deleteCandidateId = id; document.getElementById('confirm-title').innerText = "彻底删除该档案？"; document.getElementById('confirm-modal').classList.remove('hidden'); }; list.appendChild(el); }
+        function renderUserItem(id, name) { const list = document.getElementById('user-list'); const el = document.createElement('div'); el.className = "user-card p-6 pr-8 rounded-[2.5rem] flex justify-between items-center shadow-sm cursor-pointer mb-2"; el.innerHTML = `<div class="flex items-center gap-6 flex-1 text-left text-left text-left text-left" onclick="window.login('${id}', '${name}')"><div class="w-16 h-16 avatar-gradient rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl uppercase text-center text-center text-center text-center text-center">${name[0]}</div><div><p class="font-black text-slate-800 text-xl tracking-tighter italic text-left leading-tight text-left text-left text-left text-left text-left text-left text-left">${name}</p><span class="inline-block mt-1 px-3 py-1 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm leading-none tracking-widest text-left text-left text-left text-left">Local Storage</span></div></div><button class="delete-user-btn p-4 text-slate-200 hover:text-rose-500 transition-all rounded-[1.5rem] hover:bg-rose-50 active:rotate-12"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button>`; el.querySelector('.delete-user-btn').onclick = (e) => { e.stopPropagation(); deleteType = 'user'; deleteCandidateId = id; document.getElementById('confirm-title').innerText = "彻底删除该档案？"; document.getElementById('confirm-modal').classList.remove('hidden'); }; list.appendChild(el); }
 
         renderUserList();
     </script>
