@@ -23,7 +23,7 @@
             line-height: 1.6;
         }
 
-        /* 翻转卡片布局 */
+        /* 翻转卡片容器 */
         .flip-card { perspective: 1200px; height: 600px; width: 100%; max-width: 480px; }
         .flip-card-inner {
             position: relative; width: 100%; height: 100%;
@@ -35,7 +35,7 @@
             position: absolute; width: 100%; height: 100%;
             backface-visibility: hidden;
             display: flex; flex-direction: column; border-radius: 2.5rem;
-            padding: 2.2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+            padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
             background: white; border: 1px solid #f1f5f9;
         }
         .flip-card-back { transform: rotateY(180deg); }
@@ -66,24 +66,23 @@
 
         .loading-spinner {
             border: 3px solid #f1f5f9; border-top: 3px solid #6366f1;
-            border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite;
+            border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4 md:p-10 text-slate-900">
+<body class="min-h-screen flex flex-col items-center p-4 md:p-10">
 
-    <!-- 全局提示框 -->
     <div id="toast-msg" class="fixed bottom-0 left-1/2 bg-slate-900 text-white px-8 py-3.5 rounded-full text-xs font-black shadow-2xl opacity-0 pointer-events-none tracking-widest uppercase">READY</div>
 
-    <!-- 确认弹窗 -->
+    <!-- 确认删除弹窗 -->
     <div id="confirm-modal" class="hidden fixed inset-0 z-[150] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
         <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl text-center border border-slate-100">
             <h3 id="confirm-title" class="text-lg font-black text-slate-900 mb-2 italic">确定执行吗？</h3>
             <p id="confirm-desc" class="text-xs text-slate-500 mb-8 leading-relaxed">该操作不可撤销。</p>
             <div class="flex gap-3">
-                <button id="confirm-cancel-btn" onclick="window.closeConfirmModal()" class="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold">取消</button>
-                <button id="confirm-ok-btn" class="flex-1 py-4 rounded-2xl bg-rose-500 text-white font-black">确定</button>
+                <button onclick="window.closeConfirmModal()" class="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold btn-active">取消</button>
+                <button id="confirm-ok-btn" class="flex-1 py-4 rounded-2xl bg-rose-500 text-white font-black btn-active shadow-lg">确定</button>
             </div>
         </div>
     </div>
@@ -94,14 +93,14 @@
             <div class="inline-flex items-center gap-2 bg-white/60 px-4 py-1.5 rounded-full border border-white mb-8 shadow-sm">
                 <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest italic">ITMO Linguistic Engine</span>
             </div>
-            <h1 class="text-6xl font-black text-slate-900 tracking-tighter mb-2 italic uppercase">Привет!</h1>
+            <h1 class="text-6xl font-black text-slate-900 tracking-tighter mb-2 italic uppercase leading-none">Привет!</h1>
             <p class="text-slate-400 text-sm font-medium tracking-tight">AI 深度辅助 · 记忆曲线调度</p>
         </header>
         
         <div id="user-list-container">
             <div id="loading-area" class="flex flex-col items-center justify-center py-16 space-y-3">
                 <div class="loading-spinner"></div>
-                <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest italic">Loading Cloud Profiles...</p>
+                <p id="auth-status-text" class="text-[10px] text-slate-400 font-black uppercase tracking-widest italic">正在进行安全认证...</p>
             </div>
             <div id="user-list" class="user-grid"></div>
         </div>
@@ -109,11 +108,11 @@
         <div class="pt-8 border-t border-slate-200">
             <div class="flex gap-3 p-2 bg-white rounded-[1.8rem] shadow-xl shadow-indigo-100/20 border border-slate-100">
                 <input id="new-user-input" type="text" placeholder="输入新档案名称..." class="flex-1 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none font-bold text-left text-slate-700 text-sm">
-                <button onclick="window.addUser()" class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black btn-active shadow-lg">添加</button>
+                <button onclick="window.addUser()" class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black btn-active shadow-lg shadow-indigo-100">添加</button>
             </div>
             <div class="mt-8 flex items-center justify-center gap-3">
                 <div id="status-dot" class="status-indicator"></div>
-                <p id="mode-notice" class="text-[10px] text-slate-400 uppercase font-black tracking-widest italic">System Ready</p>
+                <p id="mode-notice" class="text-[10px] text-slate-400 uppercase font-black tracking-widest italic leading-none">Ready</p>
             </div>
         </div>
     </div>
@@ -135,7 +134,7 @@
 
         <div class="bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm text-left">
             <div class="flex justify-between items-center mb-6">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">调整每日学习强度</label>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">设定今日目标强度</label>
                 <span id="slider-val" class="text-xl font-black text-indigo-600 italic">50 词</span>
             </div>
             <input type="range" id="daily-target-slider" min="1" max="200" value="50" class="w-full">
@@ -145,8 +144,8 @@
             <div class="relative z-10">
                 <p id="scheduler-status-text" class="text-indigo-200 text-[10px] font-black uppercase tracking-widest mb-1 italic">Intelligent Scheduler</p>
                 <h3 id="due-count" class="text-4xl font-black text-white leading-tight italic tracking-tighter">0 词计划中</h3>
-                <div id="plan-breakdown" class="text-[10px] text-indigo-100 mt-2 font-medium opacity-80 italic tracking-wide text-left">正在分析同步任务...</div>
-                <button onclick="window.startSmartSession()" id="start-due-btn" class="mt-8 bg-white text-indigo-700 px-8 py-4 rounded-[1.5rem] text-sm font-black shadow-xl active:scale-95 transition-all uppercase tracking-widest">开始今日计划</button>
+                <div id="plan-breakdown" class="text-[10px] text-indigo-100 mt-2 font-medium opacity-80 italic tracking-wide text-left italic">正在同步任务...</div>
+                <button onclick="window.startSmartSession()" id="start-due-btn" class="mt-8 bg-white text-indigo-700 px-8 py-4 rounded-[1.5rem] text-sm font-black shadow-xl active:scale-95 transition-all uppercase tracking-widest">开始学习</button>
             </div>
             <svg class="absolute right-[-30px] bottom-[-30px] opacity-10" width="180" height="180" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
         </div>
@@ -154,7 +153,7 @@
         <div id="library-list" class="space-y-4"></div>
 
         <button onclick="window.showCreateView()" class="w-full py-6 bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] text-slate-500 font-black hover:border-indigo-500 hover:text-indigo-600 transition-all uppercase tracking-widest text-sm active:scale-95 shadow-sm">
-            + 管理或新建词库
+            + 管理词库内容
         </button>
     </div>
 
@@ -165,7 +164,6 @@
             <div class="text-center">
                 <p id="learn-progress" class="text-xl font-black text-slate-900 tracking-tighter leading-none">0 / 0</p>
                 <p id="learn-mode-text" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mt-1 italic">Active Session</p>
-                <p id="learn-title" class="hidden"></p>
             </div>
             <div class="w-12"></div>
         </header>
@@ -180,7 +178,7 @@
                         <button onclick="window.submitReview(3)" class="w-full bg-emerald-500 text-white py-5 rounded-[2rem] font-black shadow-xl active:scale-95 transition-all text-sm tracking-widest uppercase leading-none">掌握了 (稳步前进)</button>
                         <div class="grid grid-cols-2 gap-4">
                             <button onclick="window.flipCard(event)" class="bg-amber-50 text-amber-700 py-4.5 rounded-[1.5rem] font-black border border-amber-100 active:scale-95 transition-all text-xs">记不清</button>
-                            <button onclick="window.flipCard(event)" class="bg-rose-50 text-rose-700 py-4.5 rounded-[1.5rem] font-black border border-rose-100 active:scale-95 transition-all text-xs">完全忘了</button>
+                            <button onclick="window.flipCard(event)" class="bg-rose-50 text-rose-700 py-4.5 rounded-[1.5rem] font-black border border-rose-100 active:scale-95 transition-all text-xs">忘了</button>
                         </div>
                     </div>
                 </div>
@@ -191,16 +189,16 @@
                                 <p id="word-back" class="russian-text text-3xl font-black text-indigo-600 tracking-tighter leading-tight italic">...</p>
                                 <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].word)" class="p-2.5 bg-indigo-50 text-indigo-600 rounded-full active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
                             </div>
-                            <p id="meaning-back" class="text-xl font-bold text-slate-900 mt-2 font-black leading-tight italic">...</p>
+                            <p id="meaning-back" class="text-xl font-bold text-slate-900 mt-2 font-black italic leading-tight">...</p>
                         </div>
                         <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 mb-6 text-left">
-                            <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.1em] mb-1 italic">Grammar Detail</p>
+                            <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.1em] mb-1 italic">语法细节与变体</p>
                             <p id="grammar-back" class="text-[13px] text-slate-700 leading-relaxed font-medium italic">...</p>
                         </div>
                         <div class="mb-10 text-left">
                             <div class="flex items-center gap-2 mb-3 text-left">
                                 <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].example)" class="p-2 bg-indigo-50 text-indigo-600 rounded-full scale-75 origin-left"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
-                                <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none">Example Sentence</span>
+                                <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none tracking-widest">例句</span>
                             </div>
                             <p id="example-back" class="russian-text text-[15px] italic text-slate-700 leading-snug font-bold">...</p>
                             <p id="example-cn-back" class="text-xs text-slate-400 mt-3 font-medium italic text-left">...</p>
@@ -208,20 +206,20 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4 pt-4 mt-auto">
                         <button onclick="window.submitReview(1)" class="bg-slate-100 text-slate-600 py-5 rounded-[1.8rem] font-black active:scale-95 text-xs tracking-widest uppercase">再背一次</button>
-                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-5 rounded-[1.8rem] font-black active:scale-95 shadow-xl shadow-indigo-100 text-xs tracking-widest">记住了</button>
+                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-5 rounded-[1.8rem] font-black active:scale-95 shadow-xl shadow-indigo-100 text-xs tracking-widest leading-none">记住了</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 4. 内容详情列表 -->
+    <!-- 4. 词库清单界面 -->
     <div id="view-word-list" class="hidden w-full max-w-md main-container space-y-6 pb-12 text-left">
         <header class="flex items-center gap-4 py-8 text-left">
-            <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
             <div class="text-left">
-                <h2 id="word-list-title" class="text-2xl font-black text-slate-900 tracking-tighter italic leading-none text-left">词库清单</h2>
-                <p id="word-list-count" class="text-[11px] text-indigo-500 font-bold uppercase tracking-widest mt-2 italic leading-none">Records List</p>
+                <h2 id="word-list-title" class="text-2xl font-black text-slate-900 tracking-tighter italic leading-none text-left">词库详情</h2>
+                <p id="word-list-count" class="text-[11px] text-indigo-500 font-bold uppercase tracking-widest mt-2 italic text-left leading-none italic">Total Records</p>
             </div>
         </header>
         <div id="word-list-container" class="space-y-3"></div>
@@ -231,24 +229,24 @@
     <div id="view-create" class="hidden w-full max-w-md main-container space-y-6 pb-12 text-left">
         <header class="flex items-center gap-4 py-8 text-left">
             <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
-            <h2 class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none">内容编辑</h2>
+            <h2 class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none text-left">内容编辑</h2>
         </header>
         <div class="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl shadow-indigo-100/10 text-left">
             <div class="mb-8">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none">词库标题</label>
-                <input id="create-lib-name" type="text" placeholder="例如：医学俄语" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none font-black text-slate-800">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic">词库标题</label>
+                <input id="create-lib-name" type="text" placeholder="例如：日常俄语" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none font-black text-slate-800 text-left">
             </div>
             <div class="relative text-left">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none">AI 智能解析 (输入单词原形)</label>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic">AI 智能录入 (重音/词法自动解析)</label>
                 <div class="flex gap-3">
-                    <input id="ai-word-input" type="text" placeholder="输入单词..." class="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold">
+                    <input id="ai-word-input" type="text" placeholder="输入俄语单词原形..." class="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold">
                     <button id="ai-gen-btn" onclick="window.generateWord()" class="bg-indigo-600 text-white px-7 py-4 rounded-2xl font-black btn-active shadow-lg">生成</button>
                 </div>
-                <div id="ai-status" class="hidden mt-4 flex items-center gap-3 text-xs text-indigo-600 font-black italic"><div class="loading-spinner scale-50"></div> AI 正在标重音并分析语法...</div>
+                <div id="ai-status" class="hidden mt-4 flex items-center gap-3 text-xs text-indigo-600 font-black italic"><div class="loading-spinner scale-50"></div> 正在精准分析词法规律...</div>
             </div>
         </div>
         <div id="temp-words" class="space-y-4 max-h-[35vh] overflow-y-auto pr-2 mt-4 hide-scrollbar"></div>
-        <button onclick="window.saveLibraryAction()" id="save-lib-btn" class="w-full bg-slate-900 text-white py-6 rounded-[2.2rem] font-black shadow-2xl hover:scale-[1.02] transition-all tracking-widest uppercase leading-none">SAVE CHANGES</button>
+        <button onclick="window.saveLibraryAction()" id="save-lib-btn" class="w-full bg-slate-900 text-white py-6 rounded-[2.2rem] font-black shadow-2xl hover:scale-[1.02] transition-all tracking-widest uppercase leading-none">保存并同步至云端</button>
     </div>
 
     <script type="module">
@@ -256,11 +254,11 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 获取预览环境注入的配置
+        // 获取预览环境注入的配置 (RULE 1 & 3)
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "" };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-ru-itmo';
-        const geminiApiKey = ""; 
-        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ru-itmo-v4';
+        const apiKey = ""; // Gemini Key handled separately
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -273,11 +271,16 @@
         let wordDeleteRef = { libId: null, wordIndex: null };
         const STAGES = [0, 1, 2, 4, 7, 15, 30, 90, 180];
 
-        // --- 全局交互显式挂载 ---
+        // --- 全局函数显式挂载 ---
+        window.showToast = (msg) => {
+            const el = document.getElementById('toast-msg');
+            if(el) { el.innerText = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); }
+        };
+
         window.renderTempWords = () => {
             const cont = document.getElementById('temp-words');
             if(!cont) return;
-            cont.innerHTML = tempWordsForLib.map((w, i) => `<div class="bg-white p-5 rounded-3xl border border-slate-100 flex justify-between items-center shadow-sm text-left mb-2 transition-all hover:border-indigo-100"><div class="flex-1 text-left"><p class="font-black russian-text text-xl italic leading-none">${w.word}</p><p class="text-[11px] text-slate-400 font-bold uppercase mt-1 leading-none tracking-tighter">${w.meaning}</p></div><button onclick="window.removeTempWord(${i})" class="text-rose-300 p-3 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>`).join('');
+            cont.innerHTML = tempWordsForLib.map((w, i) => `<div class="bg-white p-5 rounded-3xl border border-slate-100 flex justify-between items-center shadow-sm text-left mb-2 transition-all hover:border-indigo-100"><div class="flex-1 text-left"><p class="font-black russian-text text-xl italic leading-none">${w.word}</p><p class="text-[11px] text-slate-400 font-bold uppercase mt-1 leading-none tracking-tighter italic">${w.meaning}</p></div><button onclick="window.removeTempWord(${i})" class="text-rose-300 p-3 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>`).join('');
         };
 
         window.login = (id, name) => {
@@ -300,23 +303,17 @@
                     window.updateSchedulerInfo();
                 };
             }
-            if (isOnline) loadCoreData();
-            else {
-                userProgress = JSON.parse(localStorage.getItem(`itmo_prog_${id}`) || '{}');
-                allLibraries = JSON.parse(localStorage.getItem('itmo_libs') || '[]');
-                renderLibraryList(); window.updateSchedulerInfo();
-            }
+            if (auth.currentUser) loadCoreData();
         };
 
         window.removeTempWord = (index) => { tempWordsForLib.splice(index, 1); window.renderTempWords(); };
-        window.showToast = (msg) => { const el = document.getElementById('toast-msg'); if(el) { el.innerText = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); } };
         window.closeConfirmModal = () => document.getElementById('confirm-modal').classList.add('hidden');
         window.flipCard = (e) => { if(e) e.stopPropagation(); document.getElementById('card-container').classList.toggle('flipped'); };
         window.showHomeView = () => { document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-home').classList.remove('hidden'); window.updateSchedulerInfo(); renderLibraryList(); };
         window.showCreateView = () => { editingLibraryId = null; tempWordsForLib = []; window.renderTempWords(); document.getElementById('create-lib-name').value = ""; document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-create').classList.remove('hidden'); };
         window.editLibrary = (id) => { const lib = allLibraries.find(l => l.id === id); if(!lib) return; editingLibraryId = id; tempWordsForLib = [...lib.words]; document.getElementById('create-lib-name').value = lib.name; window.renderTempWords(); document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-create').classList.remove('hidden'); };
 
-        // --- 深度定制 AI 生成引擎 ---
+        // AI 深度标注引擎
         window.generateWord = async () => {
             const input = document.getElementById('ai-word-input');
             const word = input.value.trim(); if(!word) return;
@@ -324,17 +321,17 @@
             const status = document.getElementById('ai-status');
             btn.disabled = true; status.classList.remove('hidden');
             try {
-                const systemPrompt = `你是一位专业的 ITMO 俄语教师。请为俄语单词"${word}"生成 JSON。
+                const systemPrompt = `你是一位专业的俄语教师。请为单词"${word}"生成 JSON。
                 要求：
                 1. "word" 字段必须在重读元音后精准标 Unicode 重音符号 \\u0301 (如 хорошо́)。
                 2. "grammar" 字段必须详尽：
-                   - 如果是动词，注明体(完成/未完成)及常用变位(如 1,2人称)。
+                   - 如果是动词，注明体(完成/未完成)及其对应的体对，并给出 1, 2, 3 人称单数变位。
                    - 如果是动名词，务必注明对应动词原形。
-                   - 如果是短尾形容词，注明对应长尾。
+                   - 如果是短尾形容词，注明对应长尾原形。
                 3. "example" 中所有单词必须标重音。
                 仅返回 JSON 数据: {"word": "...", "meaning": "...", "grammar": "...", "example": "...", "exampleCn": "..."}`;
                 
-                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiApiKey}`, {
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }], generationConfig: { responseMimeType: "application/json" } })
@@ -346,11 +343,10 @@
             finally { btn.disabled = false; status.classList.add('hidden'); }
         };
 
-        // --- 核心调度逻辑 ---
         function getDailyPlan() { return JSON.parse(localStorage.getItem(`itmo_plan_${currentUserProfile.id}`) || '{"target": 50}'); }
 
         window.updateSchedulerInfo = () => {
-            if (!currentUserProfile) return;
+            if (!currentUserProfile || !auth.currentUser) return;
             const target = getDailyPlan().target;
             const now = Date.now();
             let overdue = [], pool = [];
@@ -367,7 +363,7 @@
             const la = document.getElementById('plan-breakdown');
             if (actualCount === 0 && overdue.length === 0 && pool.length === 0) {
                 statusText.innerText = "库内无词";
-                la.innerText = "请添加单词或开启计划";
+                la.innerText = "请添加单词或开启 AI 定制计划";
                 document.getElementById('start-due-btn').disabled = true;
             } else {
                 statusText.innerText = `${actualCount} 词计划中`;
@@ -401,10 +397,12 @@
 
         window.saveLibraryAction = async () => {
             const name = document.getElementById('create-lib-name').value.trim();
-            if(!name || tempWordsForLib.length === 0) return window.showToast("名称和内容必填");
+            if(!name || tempWordsForLib.length === 0) return window.showToast("名称和单词不可为空");
             const data = { name, words: tempWordsForLib, updatedAt: Date.now() };
-            if (isOnline) { if (editingLibraryId) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'libraries', editingLibraryId), data, { merge: true }); else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'libraries'), data); }
-            else { const lib = { id: editingLibraryId || 'l_'+Date.now(), ...data }; if (editingLibraryId) { const idx = allLibraries.findIndex(l => l.id === editingLibraryId); if(idx > -1) allLibraries[idx] = lib; } else { allLibraries.push(lib); } localStorage.setItem('itmo_libs', JSON.stringify(allLibraries)); renderLibraryList(); }
+            if (isOnline) { 
+                if (editingLibraryId) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'libraries', editingLibraryId), data, { merge: true }); 
+                else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'libraries'), data); 
+            }
             window.showHomeView();
         };
 
@@ -414,7 +412,6 @@
             let nextLvl = f === 3 ? Math.min(STAGES.length - 1, (p.level || 0) + 1) : 0;
             const nextDate = Date.now() + (STAGES[nextLvl] * 86400000);
             if (isOnline) { try { await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, currentUserProfile.id, key), { level: nextLvl, nextReview: nextDate }); } catch(e) {} } 
-            else { userProgress[key] = { level: nextLvl, nextReview: nextDate }; localStorage.setItem(`itmo_prog_${currentUserProfile.id}`, JSON.stringify(userProgress)); }
             window.currentIndex++; renderCard();
         };
 
@@ -423,8 +420,6 @@
             const data = window.sessionWords[window.currentIndex];
             const isRuToCn = data.mode === 'RuToCn';
             document.getElementById('learn-progress').innerText = `${window.currentIndex + 1} / ${window.sessionWords.length}`;
-            document.getElementById('learn-mode-text').innerText = isRuToCn ? "俄语 → 汉语 (Guess Meaning)" : "汉语 → 俄语 (Guess Word)";
-            document.getElementById('card-front-hint').innerText = "想一想结果 · 点击翻转卡片";
             document.getElementById('word-display').innerText = isRuToCn ? data.word : data.meaning;
             document.getElementById('word-back').innerText = data.word;
             document.getElementById('meaning-back').innerText = data.meaning;
@@ -432,38 +427,66 @@
             document.getElementById('example-back').innerText = data.example;
             document.getElementById('example-cn-back').innerText = `(${data.exampleCn})`;
             document.getElementById('card-container').classList.remove('flipped');
-            document.getElementById('card-inner').classList.remove('flipped');
         }
 
+        // 核心修复逻辑 (RULE 3)
         window.init = async () => {
             try {
-                // 环境初始化
+                // 1. 先阻塞执行身份验证
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
-                isOnline = true;
-                document.getElementById('status-dot').className = "status-indicator online";
-                document.getElementById('mode-notice').innerText = "ITMO Cloud Ready";
-                document.getElementById('loading-area').classList.add('hidden');
-                loadUserProfiles();
-            } catch (err) { switchToOfflineMode(); }
+                
+                // 2. 只有在验证状态变化且确认获取到 user 后才启动监听
+                onAuthStateChanged(auth, (user) => {
+                    if (user && user.uid) {
+                        isOnline = true;
+                        document.getElementById('status-dot').className = "status-indicator online";
+                        document.getElementById('mode-notice').innerText = "Infrastructure Synced";
+                        document.getElementById('loading-area').classList.add('hidden');
+                        loadUserProfiles();
+                    }
+                });
+            } catch (err) {
+                console.error("Auth Failed:", err);
+                document.getElementById('auth-status-text').innerText = "身份验证失败，请尝试刷新页面";
+            }
         };
 
-        function switchToOfflineMode() { isOnline = false; document.getElementById('status-dot').className = "status-indicator offline"; document.getElementById('mode-notice').innerText = "Local Standalone Active"; document.getElementById('loading-area').classList.add('hidden'); renderLocalUsers(); }
-        function loadUserProfiles() { onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snap) => { const list = document.getElementById('user-list'); list.innerHTML = ''; if (snap.empty) list.innerHTML = '<p class="text-slate-400 py-16 font-black uppercase text-xs">Ready for profiles</p>'; else snap.forEach(d => renderUserItem(d.id, d.data().name, false)); }, () => switchToOfflineMode()); }
-        function loadCoreData() { onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'libraries'), (snap) => { allLibraries = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderLibraryList(); window.updateSchedulerInfo(); }); onSnapshot(collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, currentUserProfile.id), (snap) => { userProgress = {}; snap.forEach(d => userProgress[d.id] = d.data()); window.updateSchedulerInfo(); }); }
-        function renderLibraryList() { const list = document.getElementById('library-list'); list.innerHTML = allLibraries.map(lib => `<div class="bg-white p-7 rounded-[2.8rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all text-left hover:border-indigo-200"><div onclick="window.startLearnLibrary('${lib.id}')" class="flex-1 cursor-pointer"><p class="font-black text-slate-800 russian-text italic text-2xl leading-tight text-left italic">${lib.name}</p><p class="text-[10px] text-slate-400 font-black mt-2 uppercase tracking-widest text-left">${lib.words.length} Vocabulary Items</p></div><div class="flex gap-2"><button onclick="window.viewLibraryWords('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button onclick="window.editLibrary('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div></div>`).join(''); }
+        function loadUserProfiles() {
+            if (!auth.currentUser) return;
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snap) => {
+                const list = document.getElementById('user-list');
+                list.innerHTML = '';
+                if (snap.empty) list.innerHTML = '<p class="text-center text-slate-400 py-16 font-bold uppercase text-xs">Ready for profiles</p>';
+                else snap.forEach(d => renderUserItem(d.id, d.data().name));
+            }, (err) => console.error("Profile Listener Error:", err));
+        }
+
+        function loadCoreData() {
+            if (!auth.currentUser) return;
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'libraries'), (snap) => {
+                allLibraries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderLibraryList(); window.updateSchedulerInfo();
+            }, (err) => console.error("Lib Listener Error:", err));
+            
+            onSnapshot(collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, currentUserProfile.id), (snap) => {
+                userProgress = {}; snap.forEach(d => userProgress[d.id] = d.data());
+                window.updateSchedulerInfo();
+            }, (err) => console.error("Prog Listener Error:", err));
+        }
+
+        function renderLibraryList() { const list = document.getElementById('library-list'); list.innerHTML = allLibraries.map(lib => `<div class="bg-white p-7 rounded-[2.8rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all text-left hover:border-indigo-200"><div onclick="window.startLearnLibrary('${lib.id}')" class="flex-1 cursor-pointer"><p class="font-black text-slate-800 russian-text italic text-2xl leading-tight">${lib.name}</p><p class="text-[10px] text-slate-400 font-black mt-2 uppercase tracking-widest">${lib.words.length} Vocabulary Items</p></div><div class="flex gap-2"><button onclick="window.viewLibraryWords('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button onclick="window.editLibrary('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div></div>`).join(''); }
         window.viewLibraryWords = (id) => { const lib = allLibraries.find(l => l.id === id); if (!lib) return; const cont = document.getElementById('word-list-container'); document.getElementById('word-list-title').innerText = lib.name; document.getElementById('word-list-count').innerText = `Records: ${lib.words.length}`; cont.innerHTML = lib.words.map((w, i) => `<div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-between items-center text-left mb-1 transition-all hover:border-indigo-100"><div><p class="font-black text-slate-800 russian-text italic text-xl leading-tight tracking-tighter text-left">${w.word}</p><p class="text-xs text-slate-500 mt-2 font-medium text-left">${w.meaning}</p></div><div class="flex items-center gap-1"><button onclick="window.playStaticVoice('${w.word.replace(/\u0301/g, '')}')" class="p-3 bg-indigo-50 text-indigo-600 rounded-full active:scale-90 shadow-sm transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button><button onclick="window.showWordDeleteConfirm('${lib.id}', ${i}, '${w.word}')" class="p-3 text-rose-300 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>`).join(''); document.getElementById('view-home').classList.add('hidden'); document.getElementById('view-word-list').classList.remove('hidden'); };
         window.showWordDeleteConfirm = (libId, wordIndex, wordText) => { deleteType = 'word'; wordDeleteRef = { libId, wordIndex }; document.getElementById('confirm-title').innerText = "移除该单词？"; document.getElementById('confirm-modal').classList.remove('hidden'); };
         window.manualSyncCloud = () => { if (!isOnline) { window.showToast("LOCAL REFRESH SUCCESS"); return; } const icon = document.getElementById('sync-refresh-icon'); icon.classList.add('animate-spin'); loadCoreData(); setTimeout(() => { icon.classList.remove('animate-spin'); window.showToast("SYNC COMPLETED"); }, 1000); };
         window.playStaticVoice = (text) => { const clean = text.replace(/\u0301/g, ''); const utter = new SpeechSynthesisUtterance(clean); utter.lang = 'ru-RU'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(utter); };
-        window.startLearnLibrary = (id) => { const lib = allLibraries.find(l => l.id === id); if (!lib || lib.words.length === 0) return; window.sessionWords = [...lib.words].map(w=>({...w, mode: 'RuToCn'})).sort(() => Math.random() - 0.5); window.currentIndex = 0; document.getElementById('learn-progress').innerText = "1 / " + window.sessionWords.length; document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-learn').classList.remove('hidden'); renderCard(); };
-        window.addUser = async () => { const input = document.getElementById('new-user-input'); const name = input.value.trim(); if (!name) return; if (isOnline) { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'users'), { name, createdAt: Date.now() }); } else { const locals = JSON.parse(localStorage.getItem('itmo_users') || '[]'); locals.push({ id: 'u_' + Date.now(), name }); localStorage.setItem('itmo_users', JSON.stringify(locals)); switchToOfflineMode(); } input.value = ''; };
-        document.getElementById('confirm-ok-btn').onclick = async () => { if (deleteType === 'user') { if (isOnline) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', deleteCandidateId)); else { let ls = JSON.parse(localStorage.getItem('itmo_users')); ls = ls.filter(u=>u.id!==deleteCandidateId); localStorage.setItem('itmo_users', JSON.stringify(ls)); switchToOfflineMode(); } } else if (deleteType === 'word') { const lib = allLibraries.find(l => l.id === wordDeleteRef.libId); if (lib) { lib.words.splice(wordDeleteRef.wordIndex, 1); if (isOnline) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'libraries', lib.id), { words: lib.words }); else localStorage.setItem('itmo_libs', JSON.stringify(allLibraries)); window.viewLibraryWords(lib.id); window.showToast("WORD DELETED"); } } window.closeConfirmModal(); };
-        function renderLocalUsers() { const list = document.getElementById('user-list'); const locals = JSON.parse(localStorage.getItem('itmo_users') || '[]'); list.innerHTML = ''; if (locals.length === 0) { list.innerHTML = `<div onclick="window.login('guest', '本地游客')" class="user-card p-14 rounded-[3rem] border-2 border-dashed border-indigo-100 flex flex-col items-center gap-5 cursor-pointer text-slate-300 italic font-black text-4xl shadow-inner italic">?</div>`; } else { locals.forEach(u => renderUserItem(u.id, u.name, true)); } }
-        function renderUserItem(id, name, isLocal) { const list = document.getElementById('user-list'); const el = document.createElement('div'); el.className = "user-card p-6 pr-8 rounded-[2.5rem] flex justify-between items-center shadow-sm cursor-pointer mb-2"; el.innerHTML = `<div class="flex items-center gap-6 flex-1 text-left" onclick="window.login('${id}', '${name}')"><div class="w-16 h-16 avatar-gradient rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl uppercase">${name[0]}</div><div><p class="font-black text-slate-800 text-xl tracking-tighter italic text-left leading-tight">${name}</p><span class="inline-block mt-1 px-3 py-1 rounded-full text-[9px] font-black uppercase ${isLocal ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm'}">${isLocal ? 'Offline' : 'Active'}</span></div></div><button class="delete-user-btn p-4 text-slate-200 hover:text-rose-500 transition-all rounded-[1.5rem] hover:bg-rose-50 active:rotate-12"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button>`; el.querySelector('.delete-user-btn').onclick = (e) => { e.stopPropagation(); deleteType = 'user'; deleteCandidateId = id; document.getElementById('confirm-title').innerText = "彻底删除该档案？"; document.getElementById('confirm-modal').classList.remove('hidden'); }; list.appendChild(el); }
+        window.startLearnLibrary = (id) => { const lib = allLibraries.find(l => l.id === id); if (!lib || lib.words.length === 0) return; window.sessionWords = [...lib.words].map(w=>({...w, mode: 'RuToCn'})).sort(() => Math.random() - 0.5); window.currentIndex = 0; document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-learn').classList.remove('hidden'); renderCard(); };
+        window.addUser = async () => { const input = document.getElementById('new-user-input'); const name = input.value.trim(); if (!name) return; await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'users'), { name, createdAt: Date.now() }); input.value = ''; };
+        document.getElementById('confirm-ok-btn').onclick = async () => { if (deleteType === 'user') { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', deleteCandidateId)); } else if (deleteType === 'word') { const lib = allLibraries.find(l => l.id === wordDeleteRef.libId); if (lib) { lib.words.splice(wordDeleteRef.wordIndex, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'libraries', lib.id), { words: lib.words }); window.viewLibraryWords(lib.id); window.showToast("WORD DELETED"); } } window.closeConfirmModal(); };
+        function renderUserItem(id, name) { const list = document.getElementById('user-list'); const el = document.createElement('div'); el.className = "user-card p-6 pr-8 rounded-[2.5rem] flex justify-between items-center shadow-sm cursor-pointer mb-2"; el.innerHTML = `<div class="flex items-center gap-6 flex-1 text-left" onclick="window.login('${id}', '${name}')"><div class="w-16 h-16 avatar-gradient rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl uppercase">${name[0]}</div><div><p class="font-black text-slate-800 text-xl tracking-tighter italic text-left leading-tight">${name}</p><span class="inline-block mt-1 px-3 py-1 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm">Active</span></div></div><button class="delete-user-btn p-4 text-slate-200 hover:text-rose-500 transition-all rounded-[1.5rem] hover:bg-rose-50 active:rotate-12"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button>`; el.querySelector('.delete-user-btn').onclick = (e) => { e.stopPropagation(); deleteType = 'user'; deleteCandidateId = id; document.getElementById('confirm-title').innerText = "彻底删除该档案？"; document.getElementById('confirm-modal').classList.remove('hidden'); }; list.appendChild(el); }
 
         window.init();
     </script>
