@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>俄语智能记忆助手 - ITMO Vercel版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>俄语智能记忆助手 - ITMO 专业版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -11,9 +11,10 @@
         
         body {
             font-family: 'Inter', 'Noto Sans', sans-serif;
-            background-color: #f1f5f9;
+            background-color: #f8fafc;
             color: #0f172a;
             -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
         }
 
         .russian-text {
@@ -22,229 +23,208 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* 翻转卡片核心样式 */
-        .flip-card { perspective: 1200px; height: 540px; }
+        /* 翻转卡片优化 */
+        .flip-card { perspective: 1200px; height: 500px; max-height: 70vh; }
         .flip-card-inner {
             position: relative; width: 100%; height: 100%;
-            transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
             transform-style: preserve-3d;
         }
         .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
         .flip-card-front, .flip-card-back {
             position: absolute; width: 100%; height: 100%;
             backface-visibility: hidden;
-            display: flex; flex-direction: column; border-radius: 2.5rem;
-            padding: 2.5rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
-            background: white; border: 1px solid #e2e8f0;
+            display: flex; flex-direction: column; border-radius: 2rem;
+            padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+            background: white; border: 1px solid #f1f5f9;
         }
         .flip-card-back { transform: rotateY(180deg); overflow-y: auto; }
 
-        /* 档案卡片视觉优化 */
+        /* 用户卡片 UI 升级 */
         .user-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+            border: 1px solid #f1f5f9;
         }
         .user-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 25px 40px -10px rgba(99, 102, 241, 0.15);
-            border-color: #6366f1;
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px -10px rgba(99, 102, 241, 0.2);
+            border-color: #e0e7ff;
         }
 
-        .avatar-gradient {
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        /* 状态指示点 */
+        .status-indicator {
+            width: 8px; height: 8px; border-radius: 50%;
+            transition: all 0.5s;
         }
+        .status-indicator.online { background-color: #10b981; box-shadow: 0 0 10px #10b981; animation: pulse-green 2s infinite; }
+        .status-indicator.offline { background-color: #f59e0b; }
 
-        /* 按钮与交互 */
-        .btn-active:active { transform: scale(0.95); }
-        
-        .loading-spinner {
-            border: 3px solid #f1f5f9; border-top: 3px solid #6366f1;
-            border-radius: 50%; width: 28px; height: 28px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .status-pulse {
-            animation: pulse-dot 2.5s infinite;
-        }
-        @keyframes pulse-dot {
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        @keyframes pulse-green {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         /* Toast 动画 */
         #toast-msg {
-            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            transform: translate(-50%, 50px);
-            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translate(-50%, 100px);
         }
         #toast-msg.show {
-            transform: translate(-50%, -30px);
+            transform: translate(-50%, -40px);
             opacity: 1;
         }
 
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* 针对大屏 iPad 的优化 */
+        @media (min-width: 768px) {
+            .user-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+            .main-container {
+                max-width: 700px !important;
+            }
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4">
+<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
 
-    <!-- 全局提示框 -->
-    <div id="toast-msg" class="fixed bottom-0 left-1/2 bg-slate-900 text-white px-8 py-3.5 rounded-full text-xs font-black shadow-2xl z-[200] border border-slate-700 tracking-wider">MESSAGE</div>
+    <!-- Toast 提示 -->
+    <div id="toast-msg" class="fixed bottom-0 left-1/2 bg-slate-900 text-white px-8 py-3 rounded-full text-xs font-bold shadow-2xl z-[200] opacity-0">READY</div>
 
-    <!-- 删除档案确认弹窗 -->
-    <div id="delete-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-6 modal-overlay bg-black/40 backdrop-blur-md">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center">
-            <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-            </div>
-            <h3 class="text-xl font-black text-slate-900 mb-2 tracking-tight">确定要彻底删除吗？</h3>
-            <p class="text-sm text-slate-500 mb-8 leading-relaxed">删除档案“<span id="delete-target-name" class="font-black text-indigo-600"></span>”后，其所有云端同步的学习进度将**永久消失**。</p>
-            <div class="flex gap-4">
-                <button onclick="window.closeDeleteModal()" class="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold btn-active">再想想</button>
-                <button id="confirm-delete-btn" class="flex-1 py-4 rounded-2xl bg-rose-500 text-white font-black btn-active shadow-lg shadow-rose-100">确认删除</button>
+    <!-- 删除确认 -->
+    <div id="delete-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-xs rounded-3xl p-8 shadow-2xl text-center">
+            <h3 class="text-lg font-black text-slate-900 mb-2 tracking-tight">确定删除吗？</h3>
+            <p class="text-xs text-slate-500 mb-6 leading-relaxed">删除“<span id="delete-target-name" class="font-bold text-indigo-600"></span>”档案后，进度将无法找回。</p>
+            <div class="flex gap-3">
+                <button onclick="window.closeDeleteModal()" class="flex-1 py-3.5 rounded-xl bg-slate-100 text-slate-600 font-bold btn-active">取消</button>
+                <button id="confirm-delete-btn" class="flex-1 py-3.5 rounded-xl bg-rose-500 text-white font-black btn-active">删除</button>
             </div>
         </div>
     </div>
 
     <!-- 1. 档案选择界面 -->
-    <div id="view-user-select" class="w-full max-w-md space-y-10 py-12">
+    <div id="view-user-select" class="w-full max-w-md main-container space-y-12 py-8">
         <header class="text-center">
-            <div class="inline-flex items-center gap-2 bg-white/50 px-4 py-1.5 rounded-full border border-white mb-6 shadow-sm">
-                <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">ITMO Global Sync</span>
-            </div>
             <h1 class="text-5xl font-black text-slate-900 tracking-tighter mb-2">Привет!</h1>
-            <p class="text-slate-400 text-sm font-medium italic">智能俄语记忆助手 · 选择档案开始学习</p>
+            <p class="text-slate-400 text-sm font-medium">ITMO 俄语助手 · 选择档案开始</p>
         </header>
         
         <div id="user-list-container">
-            <div id="loading-area" class="flex flex-col items-center justify-center py-16 space-y-4">
+            <div id="loading-area" class="flex flex-col items-center justify-center py-10 space-y-3">
                 <div class="loading-spinner"></div>
-                <p id="loading-hint" class="text-xs text-slate-400 font-bold tracking-widest uppercase">Initializing Cloud...</p>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Checking Sync...</p>
             </div>
-            <div id="user-list" class="grid grid-cols-1 gap-5"></div>
+            <div id="user-list" class="user-grid"></div>
         </div>
 
-        <div class="pt-10 border-t border-slate-200">
-            <div class="flex gap-3 p-2.5 bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
-                <input id="new-user-input" type="text" placeholder="输入新档案名称..." class="flex-1 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold text-slate-800">
-                <button onclick="window.addUser()" class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black btn-active shadow-lg shadow-indigo-100">添加</button>
+        <div class="pt-8">
+            <div class="flex gap-2 p-1.5 bg-white rounded-2xl shadow-sm border border-slate-100">
+                <input id="new-user-input" type="text" placeholder="创建新档案..." class="flex-1 px-4 py-3 rounded-xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold text-slate-800">
+                <button onclick="window.addUser()" class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black btn-active shadow-lg">添加</button>
             </div>
             
-            <div id="mode-notice-box" class="mt-8 p-5 rounded-3xl bg-white border border-slate-100 shadow-sm">
-                <div class="flex items-center justify-center gap-3">
-                    <div id="status-dot" class="w-2.5 h-2.5 rounded-full bg-slate-300"></div>
-                    <p id="mode-notice" class="text-[11px] text-slate-500 uppercase font-black tracking-widest">Connecting to Infrastructure...</p>
-                </div>
-                <!-- 诊断区 -->
-                <div id="debug-info" class="hidden mt-4 text-left bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                    <div class="flex items-center gap-2 mb-2">
-                        <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                        <p class="text-[10px] font-black text-blue-700 uppercase tracking-tight">Vercel 同步诊断</p>
-                    </div>
-                    <p class="text-[9px] text-blue-600 font-mono break-all leading-relaxed bg-white/50 p-2 rounded-lg" id="error-code-display"></p>
-                    <p class="text-[9px] text-slate-500 mt-2 font-medium">请确保 Firebase 项目已开启 **Anonymous** 登录，并在 Authorized domains 中添加了 **vercel.app**。</p>
-                </div>
+            <div class="mt-8 flex items-center justify-center gap-2">
+                <div id="status-dot" class="status-indicator"></div>
+                <p id="mode-notice" class="text-[9px] text-slate-400 uppercase font-black tracking-widest">Standalone Mode</p>
             </div>
         </div>
     </div>
 
     <!-- 2. 主界面 (词库列表) -->
-    <div id="view-home" class="hidden w-full max-w-md space-y-6">
-        <header class="flex justify-between items-center py-4">
+    <div id="view-home" class="hidden w-full max-w-md main-container space-y-6">
+        <header class="flex justify-between items-end py-4">
             <div class="text-left">
-                <div class="flex items-center gap-2 mb-1">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></div>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cloud Database Connected</span>
-                </div>
+                <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-1">Studying as</span>
                 <h2 id="current-user-name" class="text-3xl font-black text-slate-900 tracking-tighter">用户</h2>
             </div>
             <div class="flex gap-2">
-                <button onclick="window.manualSyncCloud()" class="p-3 bg-white rounded-2xl border border-slate-100 text-slate-700 btn-active shadow-sm" title="同步数据">
-                    <svg id="sync-refresh-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
+                <button onclick="window.manualSyncCloud()" class="p-2.5 bg-white rounded-xl border border-slate-200 text-slate-500 btn-active shadow-sm">
+                    <svg id="sync-refresh-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg>
                 </button>
-                <button onclick="location.reload()" class="p-3 bg-rose-50 rounded-2xl border border-rose-100 text-rose-500 text-xs font-black btn-active">EXIT</button>
+                <button onclick="location.reload()" class="px-4 py-2.5 bg-slate-100 rounded-xl text-slate-500 text-[10px] font-black btn-active">EXIT</button>
             </div>
         </header>
 
-        <div class="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-indigo-200 relative overflow-hidden text-left transition-transform hover:scale-[1.01]">
+        <div class="bg-indigo-600 rounded-[2rem] p-8 text-white shadow-xl shadow-indigo-100 relative overflow-hidden text-left transition-transform hover:scale-[1.01]">
             <div class="relative z-10">
-                <p class="text-indigo-200 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Weekly Challenge</p>
-                <h3 id="due-count" class="text-4xl font-black text-white leading-tight">0 词待复习</h3>
-                <button onclick="window.startReviewDue()" id="start-due-btn" class="mt-6 bg-white text-indigo-700 px-8 py-3.5 rounded-2xl text-sm font-black btn-active disabled:opacity-50 shadow-xl transition-all">立即复习</button>
+                <p class="text-indigo-200 text-[10px] font-black uppercase tracking-widest mb-1">Ebbinghaus Progress</p>
+                <h3 id="due-count" class="text-4xl font-black text-white">0 词待复习</h3>
+                <button onclick="window.startReviewDue()" id="start-due-btn" class="mt-6 bg-white text-indigo-700 px-8 py-3 rounded-xl text-sm font-black btn-active disabled:opacity-50 shadow-lg">立即开始</button>
             </div>
-            <svg class="absolute right-[-30px] bottom-[-30px] opacity-10" width="180" height="180" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <svg class="absolute right-[-20px] bottom-[-20px] opacity-10" width="160" height="160" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
         </div>
 
-        <div id="library-list" class="space-y-5"></div>
+        <div id="library-list" class="space-y-4"></div>
 
-        <button onclick="window.showCreateView()" class="w-full py-6 border-2 border-dashed border-slate-300 rounded-[2.5rem] text-slate-500 font-black hover:border-indigo-500 hover:text-indigo-600 hover:bg-white transition-all btn-active text-sm tracking-wide shadow-sm">
-            + 管理或新建词库内容
+        <button onclick="window.showCreateView()" class="w-full py-5 border-2 border-dashed border-slate-300 rounded-[2rem] text-slate-500 font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-white transition-all btn-active text-sm">
+            + 管理或新建词库
         </button>
     </div>
 
-    <!-- 3. 词库清单界面 (Eyes icon) -->
-    <div id="view-word-list" class="hidden w-full max-w-md space-y-6 pb-12 text-left">
-        <header class="flex items-center gap-5 py-8">
-            <button onclick="window.showHomeView()" class="p-4 bg-white rounded-[1.5rem] border border-slate-100 text-slate-500 btn-active shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
-            <div>
-                <h2 id="word-list-title" class="text-3xl font-black text-slate-900 tracking-tighter italic">词库清单</h2>
-                <p id="word-list-count" class="text-[11px] text-indigo-500 font-black uppercase tracking-widest mt-1">Vocabulary List Overview</p>
+    <!-- 3. 词库清单一览 -->
+    <div id="view-word-list" class="hidden w-full max-w-md main-container space-y-6 pb-12">
+        <header class="flex items-center gap-4 py-6">
+            <button onclick="window.showHomeView()" class="p-3 bg-white rounded-2xl border border-slate-100 text-slate-400 btn-active shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
+            <div class="text-left">
+                <h2 id="word-list-title" class="text-2xl font-black text-slate-800 tracking-tighter">词库清单</h2>
+                <p id="word-list-count" class="text-[10px] text-indigo-500 font-bold uppercase tracking-widest">0 词条已录入</p>
             </div>
         </header>
-        <div id="word-list-container" class="space-y-4"></div>
+        <div id="word-list-container" class="space-y-3"></div>
     </div>
 
-    <!-- 4. 学习/复习模式 -->
-    <div id="view-learn" class="hidden w-full max-w-md min-h-[90vh] flex flex-col">
-        <header class="flex justify-between items-center py-6 px-2">
-            <button onclick="window.showHomeView()" class="p-3 bg-white rounded-2xl border border-slate-100 text-slate-900 font-black btn-active text-xs shadow-sm">BACK</button>
+    <!-- 4. 学习模式 -->
+    <div id="view-learn" class="hidden w-full max-w-md main-container min-h-[85vh] flex flex-col">
+        <header class="flex justify-between items-center py-6">
+            <button onclick="window.showHomeView()" class="px-4 py-2 bg-white rounded-xl border border-slate-100 text-slate-900 font-black btn-active text-[10px] shadow-sm">EXIT</button>
             <div class="text-center">
-                <p id="learn-title" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Session Active</p>
-                <div class="flex items-center gap-2 justify-center">
-                    <p id="learn-progress" class="text-xl font-black text-slate-900 tracking-tighter">0 / 0</p>
-                </div>
+                <p id="learn-progress" class="text-lg font-black text-slate-900 tracking-tighter">0 / 0</p>
+                <p id="learn-title" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Active Review</p>
             </div>
             <div class="w-12"></div>
         </header>
 
-        <div id="card-container" class="flip-card w-full mt-2">
+        <div id="card-container" class="flip-card w-full">
             <div class="flip-card-inner" id="card-inner">
                 <div class="flip-card-front justify-center items-center" onclick="window.flipCard(event)">
-                    <span class="text-slate-400 text-[10px] uppercase font-black mb-12 tracking-widest opacity-60">点击卡片翻转释义</span>
+                    <span class="text-slate-400 text-[10px] uppercase font-black mb-12 tracking-widest opacity-60">点击翻转卡片</span>
                     <div id="word-display" class="russian-text text-5xl font-black text-slate-900 mb-16 text-center leading-tight tracking-tighter">...</div>
-                    <div class="w-full space-y-4 mt-auto" onclick="event.stopPropagation()">
-                        <button onclick="window.submitReview(3)" class="w-full bg-emerald-500 text-white py-5 rounded-3xl font-black shadow-xl shadow-emerald-100 btn-active transition-all">掌握了</button>
-                        <div class="grid grid-cols-2 gap-4">
-                            <button onclick="window.flipCard(event)" class="bg-amber-50 text-amber-700 py-4 rounded-2xl font-black border border-amber-100 btn-active text-sm">不熟</button>
-                            <button onclick="window.flipCard(event)" class="bg-rose-50 text-rose-700 py-4 rounded-2xl font-black border border-rose-100 btn-active text-sm">忘了</button>
+                    <div class="w-full space-y-3 mt-auto" onclick="event.stopPropagation()">
+                        <button onclick="window.submitReview(3)" class="w-full bg-emerald-500 text-white py-4.5 rounded-2xl font-black shadow-xl shadow-emerald-100 btn-active transition-all">掌握了</button>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="window.flipCard(event)" class="bg-amber-50 text-amber-700 py-3.5 rounded-2xl font-bold border border-amber-100 btn-active text-xs">不熟</button>
+                            <button onclick="window.flipCard(event)" class="bg-rose-50 text-rose-700 py-3.5 rounded-2xl font-bold border border-rose-100 btn-active text-xs">忘了</button>
                         </div>
                     </div>
                 </div>
                 <div class="flip-card-back text-left">
-                    <div class="mb-8">
+                    <div class="mb-6">
                         <div class="flex items-center gap-3">
                             <p id="word-back" class="russian-text text-3xl font-black text-indigo-600 text-left tracking-tighter">...</p>
-                            <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].word)" class="p-2.5 bg-indigo-50 text-indigo-600 rounded-full btn-active"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
+                            <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].word)" class="p-2.5 bg-indigo-50 text-indigo-600 rounded-full btn-active"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
                         </div>
-                        <p id="meaning-back" class="text-xl font-bold text-slate-900 mt-2">...</p>
+                        <p id="meaning-back" class="text-lg font-bold text-slate-900 mt-1">...</p>
                     </div>
-                    <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 mb-8">
-                        <span class="text-slate-400 text-[9px] uppercase font-black tracking-widest block mb-2 opacity-70 italic">Grammar Rules</span>
-                        <p id="grammar-back" class="text-[13px] text-slate-700 leading-relaxed font-medium italic">...</p>
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 mb-6 text-left">
+                        <p id="grammar-back" class="text-[13px] text-slate-600 leading-relaxed font-medium italic">...</p>
                     </div>
-                    <div class="mb-10">
-                        <div class="flex items-center gap-2 mb-4">
+                    <div class="mb-8 text-left">
+                        <div class="flex items-center gap-2 mb-3">
                             <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].example)" class="p-2 bg-indigo-50 text-indigo-600 rounded-full btn-active scale-75 origin-left"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
-                            <span class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Example with Accents</span>
+                            <span class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Example Sentences</span>
                         </div>
                         <p id="example-back" class="russian-text text-[15px] italic text-slate-700 leading-snug font-bold">...</p>
-                        <p id="example-cn-back" class="text-xs text-slate-400 mt-3 font-medium">...</p>
+                        <p id="example-cn-back" class="text-xs text-slate-400 mt-2">...</p>
                     </div>
                     <div class="grid grid-cols-2 gap-4 mt-auto">
-                        <button onclick="window.submitReview(1)" class="bg-slate-100 text-slate-600 py-4.5 rounded-3xl font-black btn-active">还得练</button>
-                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-4.5 rounded-3xl font-black btn-active shadow-2xl shadow-indigo-100">记住了</button>
+                        <button onclick="window.submitReview(1)" class="bg-slate-100 text-slate-600 py-4 rounded-2xl font-black btn-active">还要练</button>
+                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-4 rounded-2xl font-black btn-active shadow-xl">记住了</button>
                     </div>
                 </div>
             </div>
@@ -252,29 +232,27 @@
     </div>
 
     <!-- 5. 词库管理 -->
-    <div id="view-create" class="hidden w-full max-w-md space-y-6 pb-12 text-left">
-        <header class="flex items-center gap-5 py-8">
-            <button onclick="window.showHomeView()" class="p-4 bg-white rounded-[1.5rem] border border-slate-100 text-slate-500 btn-active shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
-            <h2 class="text-3xl font-black text-slate-900 tracking-tighter italic">编辑内容</h2>
+    <div id="view-create" class="hidden w-full max-w-md main-container space-y-6 pb-12 text-left">
+        <header class="flex items-center gap-4 py-8">
+            <button onclick="window.showHomeView()" class="p-3 bg-white rounded-2xl border border-slate-100 text-slate-400 btn-active shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
+            <h2 class="text-2xl font-black text-slate-800 tracking-tighter italic">编辑内容</h2>
         </header>
-        <div class="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/50">
-            <div class="mb-8">
-                <label class="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] block mb-3 ml-1">Library Title</label>
-                <input id="create-lib-name" type="text" placeholder="词库名称 (如: ITMO 基础俄语)" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-black text-slate-800">
+        <div class="bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <div class="mb-6">
+                <input id="create-lib-name" type="text" placeholder="词库名称 (如: ITMO 自动化)" class="w-full px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold text-slate-800">
             </div>
             <div class="relative">
-                <label class="text-[10px] uppercase font-black text-slate-400 tracking-[0.2em] block mb-3 ml-1">AI Vocabulary Engine</label>
-                <div class="flex gap-3">
-                    <input id="ai-word-input" type="text" placeholder="单词原形..." class="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-2 focus:ring-indigo-500 font-bold">
-                    <button id="ai-gen-btn" onclick="window.generateWord()" class="bg-indigo-600 text-white px-7 py-4 rounded-2xl font-black btn-active shadow-xl shadow-indigo-100">生成</button>
+                <div class="flex gap-2">
+                    <input id="ai-word-input" type="text" placeholder="俄语单词原形..." class="flex-1 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold">
+                    <button id="ai-gen-btn" onclick="window.generateWord()" class="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black btn-active shadow-lg shadow-indigo-100">生成</button>
                 </div>
-                <div id="ai-status" class="hidden mt-4 flex items-center gap-3 text-xs text-indigo-600 font-black italic">
-                    <div class="loading-spinner scale-50"></div> 精准生成中 (包含重音)...
+                <div id="ai-status" class="hidden mt-4 flex items-center gap-2 text-xs text-indigo-500 italic font-bold">
+                    <div class="loading-spinner scale-50"></div> AI 精准标注中...
                 </div>
             </div>
         </div>
-        <div id="temp-words" class="space-y-4 max-h-[35vh] overflow-y-auto pr-2 hide-scrollbar"></div>
-        <button onclick="window.saveLibraryAction()" id="save-lib-btn" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black btn-active shadow-2xl hover:scale-[1.02] transition-transform">保存并同步云端</button>
+        <div id="temp-words" class="space-y-3 max-h-[35vh] overflow-y-auto pr-2 hide-scrollbar"></div>
+        <button onclick="window.saveLibraryAction()" id="save-lib-btn" class="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black btn-active shadow-2xl transition-all">保存并同步</button>
     </div>
 
     <script type="module">
@@ -282,7 +260,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- 核心配置清理 (基于截图) ---
+        // --- Firebase 核心配置 ---
         const configRaw = { 
             apiKey: "AIzaSyCbS0meWELmnC4upwIA6BLFd0IaILv27bQ", 
             authDomain: "project-5324482154937834389.firebaseapp.com", 
@@ -293,8 +271,8 @@
         };
         let firebaseConfig = Object.fromEntries(Object.entries(configRaw).map(([k, v]) => [k, v.trim()]));
         
-        const geminiApiKey = ""; // Gemini
-        const appId = 'itmo-sync-v7-vercel'; 
+        const geminiApiKey = ""; 
+        const appId = 'itmo-ru-final-v1'; 
         let db, auth, isOnline = false, currentUserProfile = null;
         let allLibraries = [], userProgress = {};
         window.sessionWords = []; window.currentIndex = 0;
@@ -302,12 +280,10 @@
         let deleteCandidateId = null;
         const STAGES = [0, 1, 2, 4, 7, 15, 30, 90, 180];
 
-        // --- 初始化流程 ---
+        // --- 初始化应用：静默模式 ---
         async function init() {
             const notice = document.getElementById('mode-notice');
             const dot = document.getElementById('status-dot');
-            const debugBox = document.getElementById('debug-info');
-            const errDisplay = document.getElementById('error-code-display');
 
             try {
                 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
@@ -315,37 +291,34 @@
                 db = getFirestore(app);
                 
                 const authPromise = signInAnonymously(auth);
-                const timeoutPromise = new Promise((_, r) => setTimeout(() => r(new Error("Timeout")), 3500));
+                const timeoutPromise = new Promise((_, r) => setTimeout(() => r(new Error("Timeout")), 3000));
                 await Promise.race([authPromise, timeoutPromise]);
 
                 onAuthStateChanged(auth, (user) => { 
                     if (user && user.uid) {
                         isOnline = true;
-                        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 status-pulse shadow-[0_0_8px_#10b981]";
-                        notice.innerText = "云端同步模式已激活";
-                        notice.classList.replace('text-slate-500', 'text-emerald-500');
-                        if(debugBox) debugBox.classList.add('hidden');
+                        if(dot) dot.classList.add('online');
+                        if(notice) notice.innerText = "ITMO 云端已连接";
                         document.getElementById('loading-area').classList.add('hidden');
                         loadUserProfiles(); 
                     }
                 });
             } catch (err) {
-                console.warn("Vercel Initialization Fallback:", err.code || err.message);
-                if(errDisplay) errDisplay.innerText = "Diagnosis: " + (err.code || "Connection Timeout");
-                if(debugBox) debugBox.classList.remove('hidden');
+                console.warn("Silent Fallback Activated");
                 switchToOfflineMode();
             }
         }
 
         function switchToOfflineMode() {
             isOnline = false;
-            document.getElementById('status-dot').className = "w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]";
-            document.getElementById('mode-notice').innerText = "本地离线持久化中 (Vercel Standalone)";
+            const dot = document.getElementById('status-dot');
+            if(dot) dot.classList.add('offline');
+            document.getElementById('mode-notice').innerText = "本地离线存档模式";
             document.getElementById('loading-area').classList.add('hidden');
             renderLocalUsers();
         }
 
-        // --- UI 工具集 ---
+        // --- 核心全局函数 ---
         window.showToast = (msg) => {
             const el = document.getElementById('toast-msg');
             el.innerText = msg;
@@ -354,14 +327,14 @@
         };
 
         window.manualSyncCloud = () => {
-            if (!isOnline) { window.showToast("离线模式，仅更新本地缓存"); return; }
+            if (!isOnline) { window.showToast("离线模式，仅刷新本地显示"); return; }
             const icon = document.getElementById('sync-refresh-icon');
             icon.classList.add('animate-spin');
             loadCoreData();
             setTimeout(() => { 
                 icon.classList.remove('animate-spin'); 
-                window.showToast("已成功从 ITMO 云端同步最新数据"); 
-            }, 1200);
+                window.showToast("云端同步完成"); 
+            }, 1000);
         };
 
         window.login = (id, name) => {
@@ -372,7 +345,7 @@
             if (isOnline) loadCoreData();
             else {
                 userProgress = JSON.parse(localStorage.getItem(`itmo_prog_${id}`) || '{}');
-                allLibraries = JSON.parse(localStorage.getItem('local_libraries') || '[]');
+                allLibraries = JSON.parse(localStorage.getItem('itmo_libs') || '[]');
                 renderLibraryList(); updateReviewCount();
             }
         };
@@ -384,15 +357,15 @@
 
         window.closeDeleteModal = () => document.getElementById('delete-modal').classList.add('hidden');
 
-        // --- 用户管理 (重构后的美观列表) ---
+        // --- 档案管理视图 ---
         function renderLocalUsers() {
             const list = document.getElementById('user-list');
-            const locals = JSON.parse(localStorage.getItem('local_users') || '[]');
+            const locals = JSON.parse(localStorage.getItem('itmo_users') || '[]');
             list.innerHTML = '';
             if (locals.length === 0) {
-                list.innerHTML = `<div onclick="window.login('guest', '本地游客')" class="user-card bg-white p-8 rounded-[3rem] border-2 border-dashed border-amber-200 flex flex-col items-center gap-5 cursor-pointer">
-                    <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 font-black text-3xl shadow-inner">G</div>
-                    <div class="text-center"><p class="font-black text-slate-800 text-xl tracking-tighter">本地演示档案</p><p class="text-[10px] text-amber-500 font-black uppercase tracking-widest mt-2">Standalone Only</p></div>
+                list.innerHTML = `<div onclick="window.login('guest', '本地游客')" class="user-card p-10 rounded-[2.5rem] border-2 border-dashed border-indigo-100 flex flex-col items-center gap-4 cursor-pointer text-slate-400">
+                    <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-2xl font-black">G</div>
+                    <p class="font-bold">点击添加或选择演示档案</p>
                 </div>`;
             } else { locals.forEach(u => renderUserItem(u.id, u.name, true)); }
         }
@@ -400,17 +373,17 @@
         function renderUserItem(id, name, isLocal) {
             const list = document.getElementById('user-list');
             const el = document.createElement('div');
-            el.className = "user-card bg-white p-5 pr-7 rounded-[2.5rem] border border-slate-100 flex justify-between items-center shadow-sm cursor-pointer mb-1";
+            el.className = "user-card p-5 pr-7 rounded-[2.2rem] flex justify-between items-center shadow-sm cursor-pointer mb-2";
             el.innerHTML = `
                 <div class="flex items-center gap-6 flex-1 text-left" onclick="window.login('${id}', '${name}')">
-                    <div class="w-16 h-16 avatar-gradient rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl uppercase tracking-tighter">${name[0]}</div>
+                    <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-black text-xl shadow-lg uppercase tracking-tight">${name[0]}</div>
                     <div>
-                        <p class="font-black text-slate-800 text-xl tracking-tighter">${name}</p>
-                        <span class="inline-block mt-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${isLocal ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-[0_0_10px_rgba(16,185,129,0.1)]'}">${isLocal ? 'Offline' : 'Cloud Synced'}</span>
+                        <p class="font-black text-slate-800 text-lg tracking-tighter leading-tight">${name}</p>
+                        <span class="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isLocal ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}">${isLocal ? 'Offline' : 'Cloud Sync'}</span>
                     </div>
                 </div>
-                <button class="delete-btn p-4 text-slate-200 hover:text-rose-500 transition-all rounded-[1.5rem] hover:bg-rose-50 hover:rotate-12">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                <button class="delete-btn p-3 text-slate-200 hover:text-rose-500 transition-all rounded-2xl hover:bg-rose-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                 </button>`;
             
             el.querySelector('.delete-btn').onclick = (e) => { 
@@ -423,7 +396,7 @@
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snap) => {
                 const list = document.getElementById('user-list');
                 list.innerHTML = '';
-                if (snap.empty) list.innerHTML = '<p class="text-center text-slate-400 py-16 italic font-medium">还没有云端档案，请在下方添加同步</p>';
+                if (snap.empty) list.innerHTML = '<p class="text-center text-slate-400 py-16 italic font-bold">还没有云端档案</p>';
                 else snap.forEach(d => renderUserItem(d.id, d.data().name, false));
             }, () => switchToOfflineMode());
         }
@@ -432,10 +405,10 @@
             const input = document.getElementById('new-user-input');
             const name = input.value.trim();
             if (!name) return;
-            if (isOnline) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'users'), { name, createdAt: Date.now() });
+            if (isOnline) { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'users'), { name, createdAt: Date.now() }); }
             else { 
-                const locals = JSON.parse(localStorage.getItem('local_users') || '[]'); 
-                locals.push({ id: 'u_' + Date.now(), name }); localStorage.setItem('local_users', JSON.stringify(locals)); switchToOfflineMode();
+                const locals = JSON.parse(localStorage.getItem('itmo_users') || '[]'); 
+                locals.push({ id: 'u_' + Date.now(), name }); localStorage.setItem('itmo_users', JSON.stringify(locals)); switchToOfflineMode();
             }
             input.value = '';
         };
@@ -444,15 +417,15 @@
             if(!deleteCandidateId) return;
             if (isOnline) { try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', deleteCandidateId)); } catch(e){} } 
             else {
-                let locals = JSON.parse(localStorage.getItem('local_users') || '[]');
+                let locals = JSON.parse(localStorage.getItem('itmo_users') || '[]');
                 locals = locals.filter(u => u.id !== deleteCandidateId);
-                localStorage.setItem('local_users', JSON.stringify(locals)); localStorage.removeItem(`itmo_prog_${deleteCandidateId}`);
+                localStorage.setItem('itmo_users', JSON.stringify(locals)); localStorage.removeItem(`itmo_prog_${deleteCandidateId}`);
                 switchToOfflineMode();
             }
             window.closeDeleteModal();
         };
 
-        // --- 数据加载逻辑 ---
+        // --- 单词数据业务 ---
         function loadCoreData() {
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'libraries'), (snap) => {
                 allLibraries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -467,14 +440,14 @@
         function renderLibraryList() {
             const list = document.getElementById('library-list');
             list.innerHTML = allLibraries.map(lib => `
-                <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all text-left hover:border-indigo-200">
+                <div class="bg-white p-6 rounded-[2.2rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all text-left">
                     <div onclick="window.startLearnLibrary('${lib.id}')" class="flex-1 cursor-pointer">
-                        <p class="font-black text-slate-800 russian-text italic text-2xl leading-tight tracking-tighter">${lib.name}</p>
-                        <p class="text-[10px] text-slate-400 font-black mt-2 uppercase tracking-widest">${lib.words.length} Vocabulary Units</p>
+                        <p class="font-black text-slate-800 russian-text italic text-xl leading-tight tracking-tight">${lib.name}</p>
+                        <p class="text-[9px] text-slate-400 font-black mt-2 uppercase tracking-widest">${lib.words.length} Vocabulary Items</p>
                     </div>
                     <div class="flex gap-1">
-                        <button onclick="window.viewLibraryWords('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-                        <button onclick="window.editLibrary('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                        <button onclick="window.viewLibraryWords('${lib.id}')" class="p-3 text-slate-300 hover:text-indigo-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                        <button onclick="window.editLibrary('${lib.id}')" class="p-3 text-slate-300 hover:text-indigo-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
                     </div>
                 </div>`).join('');
         }
@@ -485,11 +458,11 @@
             const btn = document.getElementById('ai-gen-btn'); btn.disabled = true;
             document.getElementById('ai-status').classList.remove('hidden');
             try {
-                const prompt = `你是一位 ITMO 大学俄语教授。请为单词"${word}"生成 JSON。要求：1. "word" 字段加 \\u0301 标重音。 2. "example" 字段中的所有俄语单词必须包含 \\u0301 重音符号。JSON格式: {"word": "...", "meaning": "...", "grammar": "...", "example": "...", "exampleCn": "..."}`;
+                const prompt = `你是一位 ITMO 俄语教授。请为单词"${word}"生成 JSON。要求：1. "word" 字段必须加 \\u0301 标重音。 2. "example" 字段的所有多音节俄语单词也必须加 \\u0301。JSON格式: {"word": "...", "meaning": "...", "grammar": "...", "example": "...", "exampleCn": "..."}`;
                 const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiApiKey}`, { method: 'POST', body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }) });
                 const res = await resp.json(); const data = JSON.parse(res.candidates[0].content.parts[0].text);
                 tempWordsForLib.unshift(data); renderTempWords(); document.getElementById('ai-word-input').value = '';
-            } catch(e) { tempWordsForLib.unshift({word, meaning: "待翻译", grammar: "", example: "", exampleCn: ""}); renderTempWords(); } 
+            } catch(e) { tempWordsForLib.unshift({word, meaning: "待补全", grammar: "", example: "", exampleCn: ""}); renderTempWords(); } 
             finally { btn.disabled = false; document.getElementById('ai-status').classList.add('hidden'); }
         };
 
@@ -504,7 +477,7 @@
                 const lib = { id: editingLibraryId || 'l_'+Date.now(), name, words: tempWordsForLib }; 
                 if (editingLibraryId) { const idx = allLibraries.findIndex(l => l.id === editingLibraryId); if(idx > -1) allLibraries[idx] = lib; } 
                 else { allLibraries.push(lib); } 
-                localStorage.setItem('local_libraries', JSON.stringify(allLibraries)); renderLibraryList(); 
+                localStorage.setItem('itmo_libs', JSON.stringify(allLibraries)); renderLibraryList(); 
             }
             window.showHomeView();
         };
@@ -550,16 +523,14 @@
         window.startReviewDue = () => {
             const now = Date.now(); window.sessionWords = [];
             allLibraries.forEach(l => l.words.forEach(w => { if (userProgress[btoa(encodeURIComponent(w.word))]?.nextReview <= now) window.sessionWords.push(w); }));
-            window.currentIndex = 0; document.getElementById('learn-title').innerText = "复习计划中"; 
+            window.currentIndex = 0; document.getElementById('learn-title').innerText = "复习任务开始"; 
             document.getElementById('view-home').classList.add('hidden'); document.getElementById('view-learn').classList.remove('hidden'); renderCard();
         };
 
         window.viewLibraryWords = (id) => {
             const lib = allLibraries.find(l => l.id === id); if (!lib) return;
-            const cont = document.getElementById('word-list-container');
-            document.getElementById('word-list-title').innerText = lib.name;
-            document.getElementById('word-list-count').innerText = `已录入 ${lib.words.length} 词`;
-            cont.innerHTML = lib.words.map(w => `<div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-between items-center text-left"><div><p class="font-black text-slate-800 russian-text italic text-xl leading-tight tracking-tighter">${w.word}</p><p class="text-xs text-slate-500 mt-2 font-medium">${w.meaning}</p></div><button onclick="window.playStaticVoice('${w.word.replace(/\u0301/g, '')}')" class="p-3 bg-indigo-50 text-indigo-600 rounded-full btn-active"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button></div>`).join('');
+            document.getElementById('word-list-count').innerText = `已录入 ${lib.words.length} 词条记录`;
+            document.getElementById('word-list-container').innerHTML = lib.words.map(w => `<div class="bg-white p-5 rounded-[2.2rem] border border-slate-100 shadow-sm flex justify-between items-center text-left"><div><p class="font-black text-slate-800 russian-text italic text-xl leading-tight tracking-tighter">${w.word}</p><p class="text-xs text-slate-500 mt-2 font-medium">${w.meaning}</p></div><button onclick="window.playStaticVoice('${w.word.replace(/\u0301/g, '')}')" class="p-3 bg-indigo-50 text-indigo-600 rounded-full btn-active"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button></div>`).join('');
             document.getElementById('view-home').classList.add('hidden');
             document.getElementById('view-word-list').classList.remove('hidden');
         };
@@ -571,7 +542,7 @@
             renderTempWords(); document.getElementById('view-home').classList.add('hidden'); document.getElementById('view-create').classList.remove('hidden'); 
         };
         window.showHomeView = () => { document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-home').classList.remove('hidden'); updateReviewCount(); renderLibraryList(); };
-        function renderTempWords() { document.getElementById('temp-words').innerHTML = tempWordsForLib.map((w, i) => `<div class="bg-white p-5 rounded-[2rem] border border-slate-100 flex justify-between items-center shadow-sm text-left mb-3"><div class="flex-1 text-left"><p class="font-black russian-text text-xl leading-tight italic tracking-tighter">${w.word}</p><p class="text-[11px] text-slate-400 font-black tracking-tight mt-1 uppercase">${w.meaning}</p></div><button onclick="tempWordsForLib.splice(${i}, 1); renderTempWords();" class="text-rose-300 p-3 hover:text-rose-600 hover:bg-rose-50 rounded-2xl"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div>`).join(''); }
+        function renderTempWords() { document.getElementById('temp-words').innerHTML = tempWordsForLib.map((w, i) => `<div class="bg-white p-5 rounded-[2.2rem] border border-slate-100 flex justify-between items-center shadow-sm text-left mb-3"><div class="flex-1 text-left"><p class="font-black text-slate-800 russian-text text-xl leading-tight italic tracking-tighter">${w.word}</p><p class="text-[11px] text-slate-400 font-black tracking-tight mt-1 uppercase">${w.meaning}</p></div><button onclick="tempWordsForLib.splice(${i}, 1); renderTempWords();" class="text-rose-300 p-3 hover:text-rose-600 hover:bg-rose-50 rounded-2xl"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div>`).join(''); }
         function updateReviewCount() { const now = Date.now(); let due = 0; allLibraries.forEach(l => l.words.forEach(w => { if (userProgress[btoa(encodeURIComponent(w.word))]?.nextReview <= now) due++; })); document.getElementById('due-count').innerText = `${due} 词待复习`; document.getElementById('start-due-btn').disabled = (due === 0); }
 
         init();
