@@ -23,7 +23,7 @@
             line-height: 1.6;
         }
 
-        /* 翻转卡片容器：高度足够承载内容 */
+        /* 翻转卡片布局：确保高度足够并处理内容溢出 */
         .flip-card { perspective: 1200px; height: 620px; width: 100%; max-width: 480px; }
         .flip-card-inner {
             position: relative; width: 100%; height: 100%;
@@ -35,7 +35,7 @@
             position: absolute; width: 100%; height: 100%;
             backface-visibility: hidden;
             display: flex; flex-direction: column; border-radius: 2.5rem;
-            padding: 2.2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+            padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
             background: white; border: 1px solid #f1f5f9;
         }
         .flip-card-back { transform: rotateY(180deg); }
@@ -73,7 +73,6 @@
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 md:p-10">
 
-    <!-- Toast 提示容器 -->
     <div id="toast-msg" class="fixed bottom-0 left-1/2 bg-slate-900 text-white px-8 py-3.5 rounded-full text-xs font-black shadow-2xl opacity-0 pointer-events-none tracking-widest uppercase">SYCNED</div>
 
     <!-- 确认删除弹窗 -->
@@ -82,7 +81,7 @@
             <h3 id="confirm-title" class="text-lg font-black text-slate-900 mb-2 italic">确定执行吗？</h3>
             <p id="confirm-desc" class="text-xs text-slate-500 mb-8 leading-relaxed">该操作不可撤销。</p>
             <div class="flex gap-3">
-                <button id="confirm-cancel-btn" onclick="window.closeConfirmModal()" class="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold btn-active">取消</button>
+                <button onclick="window.closeConfirmModal()" class="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold btn-active">取消</button>
                 <button id="confirm-ok-btn" class="flex-1 py-4 rounded-2xl bg-rose-500 text-white font-black">确定</button>
             </div>
         </div>
@@ -92,23 +91,23 @@
     <div id="view-user-select" class="w-full max-w-md main-container space-y-12 py-8 text-center">
         <header>
             <div class="inline-flex items-center gap-2 bg-white/60 px-4 py-1.5 rounded-full border border-white mb-8 shadow-sm">
-                <span id="system-badge" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest italic">ITMO Linguistic Engine v6.0</span>
+                <span id="system-badge" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest italic">ITMO Linguistic Engine v7.0</span>
             </div>
             <h1 class="text-6xl font-black text-slate-900 tracking-tighter mb-2 italic uppercase">Привет!</h1>
-            <p class="text-slate-400 text-sm font-medium tracking-tight text-center">AI 智能原型识别 · 艾宾浩斯动态复习</p>
+            <p class="text-slate-400 text-sm font-medium tracking-tight">AI 原型智能分析 · 记忆曲线调度</p>
         </header>
         
         <div id="user-list-container">
             <div id="loading-area" class="flex flex-col items-center justify-center py-16 space-y-6">
-                <div id="spinner-box" class="flex flex-col items-center gap-3 text-center">
+                <div id="spinner-box" class="flex flex-col items-center gap-3">
                     <div class="loading-spinner"></div>
-                    <p id="auth-status-text" class="text-[10px] text-slate-400 font-black uppercase tracking-widest italic">正在同步云端身份...</p>
+                    <p id="auth-status-text" class="text-[10px] text-slate-400 font-black uppercase tracking-widest italic">正在尝试连接云端...</p>
                 </div>
-                <!-- 连接 fallback 逻辑 -->
+                <!-- 修复一直转圈：5秒后自动显示本地选项 -->
                 <div id="connection-fallback" class="hidden space-y-4 w-full">
-                    <p class="text-xs text-rose-500 font-bold">无法连接至云端数据库</p>
+                    <p class="text-xs text-rose-500 font-bold">连接超时，请选择：</p>
                     <div class="flex flex-col gap-3">
-                        <button onclick="location.reload()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">重试云端连接</button>
+                        <button onclick="location.reload()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">刷新并重试</button>
                         <button onclick="window.switchToOfflineMode()" class="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-black">直接进入本地模式</button>
                     </div>
                 </div>
@@ -123,7 +122,7 @@
             </div>
             <div class="mt-8 flex items-center justify-center gap-3">
                 <div id="status-dot" class="status-indicator"></div>
-                <p id="mode-notice" class="text-[10px] text-slate-400 uppercase font-black tracking-widest italic leading-none italic">System Booting</p>
+                <p id="mode-notice" class="text-[10px] text-slate-400 uppercase font-black tracking-widest italic leading-none italic">等待身份验证...</p>
             </div>
         </div>
     </div>
@@ -132,21 +131,20 @@
     <div id="view-home" class="hidden w-full max-w-md main-container space-y-6">
         <header class="flex justify-between items-center py-4">
             <div class="text-left">
-                <h2 id="current-user-name" class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none">用户</h2>
+                <h2 id="current-user-name" class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none text-left">用户</h2>
                 <div class="flex items-center gap-2 mt-2">
                     <span id="target-display" class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">每日计划: 50 词</span>
                 </div>
             </div>
             <div class="flex gap-2">
-                <button onclick="window.manualSyncCloud()" class="p-3 bg-white rounded-2xl border border-slate-200 text-slate-600 shadow-sm active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg></button>
-                <button onclick="location.reload()" class="p-3 bg-slate-50 rounded-2xl text-slate-400 text-[10px] font-black tracking-widest uppercase">Logout</button>
+                <button onclick="window.manualSyncCloud()" class="p-3 bg-white rounded-2xl border border-slate-200 text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg></button>
+                <button onclick="location.reload()" class="p-3 bg-slate-50 rounded-2xl text-slate-400 text-[10px] font-black tracking-widest uppercase">退出</button>
             </div>
         </header>
 
-        <!-- 滑块控制 -->
         <div class="bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm text-left">
             <div class="flex justify-between items-center mb-6">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none italic">设定每日复习目标</label>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">设定今日目标</label>
                 <span id="slider-val" class="text-xl font-black text-indigo-600 italic leading-none">50 词</span>
             </div>
             <input type="range" id="daily-target-slider" min="1" max="200" value="50" class="w-full">
@@ -154,10 +152,10 @@
 
         <div id="session-card" class="bg-indigo-600 rounded-[3rem] p-8 text-white shadow-2xl shadow-indigo-100 relative overflow-hidden text-left transition-transform hover:scale-[1.01]">
             <div class="relative z-10">
-                <p id="scheduler-status-text" class="text-indigo-200 text-[10px] font-black uppercase tracking-widest mb-1 italic italic leading-none">Smart Scheduler</p>
+                <p id="scheduler-status-text" class="text-indigo-200 text-[10px] font-black uppercase tracking-widest mb-1 italic italic">Smart Scheduler</p>
                 <h3 id="due-count" class="text-4xl font-black text-white leading-tight italic tracking-tighter text-left">0 词计划中</h3>
                 <div id="plan-breakdown" class="text-[10px] text-indigo-100 mt-2 font-medium opacity-80 italic tracking-wide text-left italic">分析同步任务中...</div>
-                <button onclick="window.startSmartSession()" id="start-due-btn" class="mt-8 bg-white text-indigo-700 px-8 py-4 rounded-[1.5rem] text-sm font-black shadow-xl active:scale-95 transition-all uppercase tracking-widest">开始今日任务</button>
+                <button onclick="window.startSmartSession()" id="start-due-btn" class="mt-8 bg-white text-indigo-700 px-8 py-4 rounded-[1.5rem] text-sm font-black shadow-xl active:scale-95 transition-all uppercase tracking-widest">开始学习</button>
             </div>
             <svg class="absolute right-[-30px] bottom-[-30px] opacity-10" width="180" height="180" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
         </div>
@@ -169,13 +167,13 @@
         </button>
     </div>
 
-    <!-- 3. 学习模式 (双向 Recall 模式) -->
+    <!-- 3. 学习模式 -->
     <div id="view-learn" class="hidden w-full max-w-md main-container min-h-[85vh] flex flex-col items-center">
         <header class="w-full flex justify-between items-center py-6 px-2">
-            <button onclick="window.showHomeView()" class="px-5 py-2.5 bg-white rounded-2xl border border-slate-100 text-slate-900 font-black text-[10px] shadow-sm tracking-widest uppercase">Exit</button>
+            <button onclick="window.showHomeView()" class="px-5 py-2.5 bg-white rounded-2xl border border-slate-100 text-slate-900 font-black text-[10px] shadow-sm tracking-widest uppercase">返回</button>
             <div class="text-center">
                 <p id="learn-progress" class="text-xl font-black text-slate-900 tracking-tighter leading-none">0 / 0</p>
-                <p id="learn-mode-text" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mt-1 italic">Active Session</p>
+                <p id="learn-mode-text" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mt-1 italic leading-none">Dual Path</p>
                 <p id="learn-title" class="hidden"></p>
             </div>
             <div class="w-12"></div>
@@ -184,11 +182,12 @@
         <div id="card-container" class="flip-card mt-2">
             <div class="flip-card-inner" id="card-inner">
                 <div class="flip-card-front justify-center items-center" onclick="window.flipCard(event)">
-                    <span id="card-front-hint" class="text-slate-400 text-[10px] uppercase font-black mb-12 tracking-widest opacity-60 italic text-center leading-none tracking-tight italic">想一想它的释义 · 点击翻转</span>
+                    <span id="card-front-hint" class="text-slate-400 text-[10px] uppercase font-black mb-12 tracking-widest opacity-60 italic text-center leading-none tracking-tight">想一想它的释义 · 点击翻转</span>
                     <div id="word-display" class="russian-text text-5xl font-black text-slate-800 mb-16 text-center leading-tight tracking-tighter italic">...</div>
                     
+                    <!-- 垂直堆叠，防按钮遮挡 -->
                     <div class="w-full flex flex-col gap-4 mt-auto" onclick="event.stopPropagation()">
-                        <button onclick="window.submitReview(3)" class="w-full bg-emerald-500 text-white py-5 rounded-[2rem] font-black shadow-xl active:scale-95 transition-all text-sm tracking-widest uppercase leading-none">掌握了 (推迟复习)</button>
+                        <button onclick="window.submitReview(3)" class="w-full bg-emerald-500 text-white py-5 rounded-[2rem] font-black shadow-xl active:scale-95 transition-all text-sm tracking-widest uppercase leading-none">掌握了 (稳步前进)</button>
                         <div class="grid grid-cols-2 gap-4">
                             <button onclick="window.flipCard(event)" class="bg-amber-50 text-amber-700 py-4.5 rounded-[1.5rem] font-black border border-amber-100 active:scale-95 transition-all text-xs">记不清</button>
                             <button onclick="window.flipCard(event)" class="bg-rose-50 text-rose-700 py-4.5 rounded-[1.5rem] font-black border border-rose-100 active:scale-95 transition-all text-xs">忘了</button>
@@ -202,16 +201,16 @@
                                 <p id="word-back" class="russian-text text-3xl font-black text-indigo-600 tracking-tighter leading-tight italic">...</p>
                                 <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].word)" class="p-2.5 bg-indigo-50 text-indigo-600 rounded-full active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
                             </div>
-                            <p id="meaning-back" class="text-xl font-bold text-slate-900 mt-2 font-black leading-tight italic">...</p>
+                            <p id="meaning-back" class="text-xl font-bold text-slate-900 mt-2 font-black leading-tight">...</p>
                         </div>
                         <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 mb-6 text-left">
-                            <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.1em] mb-1 italic">语法分析与原型背景</p>
+                            <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.1em] mb-1 italic leading-none">语法背景与原型</p>
                             <p id="grammar-back" class="text-[13px] text-slate-700 leading-relaxed font-medium italic">...</p>
                         </div>
                         <div class="mb-10 text-left">
                             <div class="flex items-center gap-2 mb-3 text-left">
                                 <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].example)" class="p-2 bg-indigo-50 text-indigo-600 rounded-full scale-75 origin-left"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
-                                <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none tracking-widest">经典例句</span>
+                                <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none">经典例句</span>
                             </div>
                             <p id="example-back" class="russian-text text-[15px] italic text-slate-700 leading-snug font-bold">...</p>
                             <p id="example-cn-back" class="text-xs text-slate-400 mt-3 font-medium italic text-left">...</p>
@@ -219,43 +218,43 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4 pt-4 mt-auto">
                         <button onclick="window.submitReview(1)" class="bg-slate-100 text-slate-600 py-5 rounded-[1.8rem] font-black active:scale-95 text-xs tracking-widest uppercase">再背一次</button>
-                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-5 rounded-[1.8rem] font-black active:scale-95 shadow-xl shadow-indigo-100 text-xs tracking-widest leading-none uppercase">记住了</button>
+                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-5 rounded-[1.8rem] font-black active:scale-95 shadow-xl shadow-indigo-100 text-xs tracking-widest leading-none">记住了</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 4. 词库详情列表 (眼睛图标) -->
+    <!-- 4. 词库详情列表 -->
     <div id="view-word-list" class="hidden w-full max-w-md main-container space-y-6 pb-12 text-left">
         <header class="flex items-center gap-4 py-8 text-left">
             <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
-            <div class="text-left">
-                <h2 id="word-list-title" class="text-2xl font-black text-slate-900 tracking-tighter italic leading-none text-left italic">词库详情</h2>
-                <p id="word-list-count" class="text-[11px] text-indigo-500 font-bold uppercase tracking-widest mt-2 italic text-left leading-none italic">Vocabulary</p>
+            <div class="text-left text-left">
+                <h2 id="word-list-title" class="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">词库清单</h2>
+                <p id="word-list-count" class="text-[11px] text-indigo-500 font-bold uppercase tracking-widest mt-2 italic text-left leading-none">Vocabulary Summary</p>
             </div>
         </header>
         <div id="word-list-container" class="space-y-3 text-left"></div>
     </div>
 
-    <!-- 5. 内容编辑器 (核心 AI 解析入口) -->
+    <!-- 5. 内容编辑器 (AI 深度分析) -->
     <div id="view-create" class="hidden w-full max-w-md main-container space-y-6 pb-12 text-left">
         <header class="flex items-center gap-4 py-8 text-left">
             <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
             <h2 class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none">内容编辑</h2>
         </header>
         <div class="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl shadow-indigo-100/10 text-left">
-            <div class="mb-8">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic">词库标题</label>
-                <input id="create-lib-name" type="text" placeholder="例如：医学俄语" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none font-black text-slate-800">
+            <div class="mb-8 text-left">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none">词库标题</label>
+                <input id="create-lib-name" type="text" placeholder="例如：日常生活常用词" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none font-black text-slate-800">
             </div>
             <div class="relative text-left">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic">AI 智能解析 (自动溯源并标重音)</label>
-                <div class="flex gap-3">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none">AI 智能解析 (支持变位/变格词自动还原)</label>
+                <div class="flex gap-3 text-left">
                     <input id="ai-word-input" type="text" placeholder="输入单词(如 читаю)..." class="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold">
                     <button id="ai-gen-btn" onclick="window.generateWord()" class="bg-indigo-600 text-white px-7 py-4 rounded-2xl font-black btn-active shadow-lg">生成</button>
                 </div>
-                <div id="ai-status" class="hidden mt-4 flex items-center gap-3 text-xs text-indigo-600 font-black italic"><div class="loading-spinner scale-50"></div> 正在识别原型并标注语法...</div>
+                <div id="ai-status" class="hidden mt-4 flex items-center gap-3 text-xs text-indigo-600 font-black italic"><div class="loading-spinner scale-50"></div> 正在识别原型并标注重音...</div>
             </div>
         </div>
         <div id="temp-words" class="space-y-4 max-h-[35vh] overflow-y-auto pr-2 mt-4 hide-scrollbar"></div>
@@ -267,10 +266,10 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // RULE 1: Config Bridge
+        // 配置读取
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "" };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ru-itmo-v6';
-        const apiKey = ""; // Gemini handled in process
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'itmo-ru-smart-v7';
+        const apiKey = ""; // Gemini API Key handled externally
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -285,13 +284,27 @@
         const STAGES = [0, 1, 2, 4, 7, 15, 30, 90, 180];
 
         // --- 全局函数挂载 ---
+        window.showToast = (msg) => {
+            const el = document.getElementById('toast-msg');
+            if(el) { el.innerText = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); }
+        };
+
         window.renderTempWords = () => {
             const cont = document.getElementById('temp-words');
             if(!cont) return;
-            cont.innerHTML = tempWordsForLib.map((w, i) => `<div class="bg-white p-5 rounded-3xl border border-slate-100 flex justify-between items-center shadow-sm text-left mb-2 transition-all hover:border-indigo-100"><div class="flex-1 text-left"><p class="font-black russian-text text-xl italic leading-none">${w.word}</p><p class="text-[11px] text-slate-400 font-bold uppercase mt-1 leading-none tracking-tighter italic">${w.meaning}</p></div><button onclick="window.removeTempWord(${i})" class="text-rose-300 p-3 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>`).join('');
+            cont.innerHTML = tempWordsForLib.map((w, i) => `<div class="bg-white p-5 rounded-3xl border border-slate-100 flex justify-between items-center shadow-sm text-left mb-2 transition-all hover:border-indigo-100"><div class="flex-1 text-left"><p class="font-black russian-text text-xl italic leading-none">${w.word}</p><p class="text-[11px] text-slate-400 font-bold uppercase mt-1 leading-none tracking-tighter italic text-left">${w.meaning}</p></div><button onclick="window.removeTempWord(${i})" class="text-rose-300 p-3 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>`).join('');
         };
 
-        window.login = async (id, name) => {
+        window.switchToOfflineMode = () => {
+            isOfflineMode = true;
+            document.getElementById('loading-area').classList.add('hidden');
+            document.getElementById('status-dot').className = "status-indicator offline";
+            document.getElementById('mode-notice').innerText = "Standalone Local Mode";
+            document.getElementById('system-badge').innerText = "ITMO LOCAL ENGINE";
+            renderUserList();
+        };
+
+        window.login = (id, name) => {
             currentUserProfile = { id, name };
             document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden'));
             document.getElementById('view-home').classList.remove('hidden');
@@ -315,30 +328,13 @@
         };
 
         window.removeTempWord = (index) => { tempWordsForLib.splice(index, 1); window.renderTempWords(); };
-        window.showToast = (msg) => { const el = document.getElementById('toast-msg'); if(el) { el.innerText = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); } };
         window.closeConfirmModal = () => document.getElementById('confirm-modal').classList.add('hidden');
         window.flipCard = (e) => { if(e) e.stopPropagation(); document.getElementById('card-container').classList.toggle('flipped'); };
         window.showHomeView = () => { document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-home').classList.remove('hidden'); window.updateSchedulerInfo(); renderLibraryList(); };
         window.showCreateView = () => { editingLibraryId = null; tempWordsForLib = []; window.renderTempWords(); document.getElementById('create-lib-name').value = ""; document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-create').classList.remove('hidden'); };
         window.editLibrary = (id) => { const lib = allLibraries.find(l => l.id === id); if(!lib) return; editingLibraryId = id; tempWordsForLib = [...lib.words]; document.getElementById('create-lib-name').value = lib.name; window.renderTempWords(); document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-create').classList.remove('hidden'); };
 
-        window.switchToOfflineMode = () => {
-            isOfflineMode = true;
-            document.getElementById('loading-area').classList.add('hidden');
-            document.getElementById('status-dot').className = "status-indicator offline";
-            document.getElementById('mode-notice').innerText = "Standalone Mode (LocalStorage)";
-            renderLocalUserList();
-        };
-
-        function renderLocalUserList() {
-            const list = document.getElementById('user-list');
-            const locals = JSON.parse(localStorage.getItem('itmo_users') || '[]');
-            list.innerHTML = '';
-            if (locals.length === 0) list.innerHTML = `<div onclick="window.login('guest', '本地用户')" class="user-card p-12 rounded-[2.5rem] border-2 border-dashed border-indigo-50 flex flex-col items-center gap-2 cursor-pointer text-slate-300 italic font-black uppercase text-xs text-center">Create Local Profile</div>`;
-            else locals.forEach(u => renderUserItem(u.id, u.name, true));
-        }
-
-        // --- 深度强化版 AI 生成引擎 ---
+        // --- AI 深度语义解析 ---
         window.generateWord = async () => {
             const input = document.getElementById('ai-word-input');
             const word = input.value.trim(); if(!word) return;
@@ -346,27 +342,26 @@
             const status = document.getElementById('ai-status');
             btn.disabled = true; status.classList.remove('hidden');
             try {
-                const systemPrompt = `你是一位专业的俄语教师。请根据提供的输入返回极其详尽的俄语词条 JSON。
+                const systemPrompt = `你是一位专业的俄语教师。请为提供的俄语输入生成详细的 JSON 对象。
                 逻辑指令：
                 1. **原型还原(Lemma)**：如果输入词是变位/变格形式，务必识别其原型词，并作为"word"字段。
-                2. **标标注精准重音**：在"word"原型的重读元音后加 \\u0301 (Unicode)。
+                2. **重音标注**：在"word"原型的重读元音后加 \\u0301 (Unicode)。
                 3. **极其详尽语法解析**：
-                   - 动词：注明体(完成/未完成)及其对应的体对词。写明 1, 2, 3 人称单数变位。
+                   - 动词：注明体(完成/未完成)、体对。若输入是变位，请注明“这是...的变位”，给出 1, 2, 3 人称单数变位。
                    - 动名词：务必注明对应的动词原型。
                    - 短尾形容词：对应长尾原形，写明性数。
-                   - 名词：性数格变化。
                 4. 造一个典型例句，所有俄语单词标重音。
-                仅返回 JSON 数据: {"word": "原型词", "meaning": "中文释义", "grammar": "详尽背景分析", "example": "俄语例句", "exampleCn": "例句翻译"}`;
+                仅返回 JSON 数据: {"word": "原型词词条", "meaning": "含义", "grammar": "背景分析", "example": "俄语例句", "exampleCn": "例句翻译"}`;
                 
                 const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: `输入词: ${word}` }] }], systemInstruction: { parts: [{ text: systemPrompt }] }, generationConfig: { responseMimeType: "application/json" } })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `输入: ${word}` }] }], systemInstruction: { parts: [{ text: systemPrompt }] }, generationConfig: { responseMimeType: "application/json" } })
                 });
                 const res = await resp.json();
                 const data = JSON.parse(res.candidates[0].content.parts[0].text);
                 tempWordsForLib.unshift(data); window.renderTempWords(); input.value = '';
-            } catch(e) { window.showToast("AI 解析失败，请重试"); } 
+            } catch(e) { window.showToast("AI 解析失败，请检查拼写"); } 
             finally { btn.disabled = false; status.classList.add('hidden'); }
         };
 
@@ -386,14 +381,13 @@
                 });
             });
             const actualCount = Math.min(target, overdue.length + pool.length);
-            const statusText = document.getElementById('due-count');
             const la = document.getElementById('plan-breakdown');
             if (actualCount === 0 && overdue.length === 0 && pool.length === 0) {
-                statusText.innerText = "库内无词";
+                document.getElementById('due-count').innerText = "库内无词";
                 la.innerText = "请添加单词或开启计划";
                 document.getElementById('start-due-btn').disabled = true;
             } else {
-                statusText.innerText = `${actualCount} 词计划中`;
+                document.getElementById('due-count').innerText = `${actualCount} 词计划中`;
                 la.innerText = `过期复习: ${overdue.length} | 补位新词: ${Math.max(0, actualCount - overdue.length)}`;
                 document.getElementById('start-due-btn').disabled = false;
             }
@@ -424,7 +418,7 @@
 
         window.saveLibraryAction = async () => {
             const name = document.getElementById('create-lib-name').value.trim();
-            if(!name || tempWordsForLib.length === 0) return window.showToast("名称和单词不可为空");
+            if(!name || tempWordsForLib.length === 0) return window.showToast("名称和单词内容必填");
             const data = { name, words: tempWordsForLib, updatedAt: Date.now() };
             if (!isOfflineMode) { 
                 if (editingLibraryId) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'libraries', editingLibraryId), data, { merge: true }); 
@@ -472,21 +466,22 @@
                         clearTimeout(authTimeout);
                         isOfflineMode = false;
                         document.getElementById('status-dot').className = "status-indicator online";
-                        document.getElementById('mode-notice').innerText = "Infrastructure Online";
+                        document.getElementById('mode-notice').innerText = "ITMO Cloud Ready";
                         document.getElementById('loading-area').classList.add('hidden');
-                        loadUserProfiles();
+                        renderUserList();
                     }
                 });
             } catch (err) { switchToOfflineMode(); }
         };
 
-        function loadUserProfiles() {
+        function renderUserList() {
+            if (isOfflineMode) { renderLocalUserList(); return; }
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snap) => {
                 const list = document.getElementById('user-list');
                 list.innerHTML = '';
-                if (snap.empty) list.innerHTML = '<p class="text-center text-slate-400 py-16 font-bold uppercase text-xs text-center">Ready for profiles</p>';
+                if (snap.empty) list.innerHTML = '<p class="text-center text-slate-400 py-16 font-bold uppercase text-xs">Ready for profiles</p>';
                 else snap.forEach(d => renderUserItem(d.id, d.data().name));
-            }, (err) => console.error("Listener Error:", err));
+            }, (err) => { console.error(err); window.switchToOfflineMode(); });
         }
 
         function loadCoreData() {
@@ -523,7 +518,7 @@
             window.closeConfirmModal(); 
         };
 
-        function renderUserItem(id, name, isLocal = false) { const list = document.getElementById('user-list'); const el = document.createElement('div'); el.className = "user-card p-6 pr-8 rounded-[2.5rem] flex justify-between items-center shadow-sm cursor-pointer mb-2"; el.innerHTML = `<div class="flex items-center gap-6 flex-1 text-left" onclick="window.login('${id}', '${name}')"><div class="w-16 h-16 avatar-gradient rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl uppercase">${name[0]}</div><div><p class="font-black text-slate-800 text-xl tracking-tighter italic text-left leading-tight text-left">${name}</p><span class="inline-block mt-1 px-3 py-1 rounded-full text-[9px] font-black uppercase ${isLocal ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm'}">${isLocal ? 'Offline' : 'Active'}</span></div></div><button class="delete-user-btn p-4 text-slate-200 hover:text-rose-500 transition-all rounded-[1.5rem] hover:bg-rose-50 active:rotate-12"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button>`; el.querySelector('.delete-user-btn').onclick = (e) => { e.stopPropagation(); deleteType = 'user'; deleteCandidateId = id; document.getElementById('confirm-title').innerText = "彻底删除该档案？"; document.getElementById('confirm-modal').classList.remove('hidden'); }; list.appendChild(el); }
+        function renderUserItem(id, name, isLocal = false) { const list = document.getElementById('user-list'); const el = document.createElement('div'); el.className = "user-card p-6 pr-8 rounded-[2.5rem] flex justify-between items-center shadow-sm cursor-pointer mb-2"; el.innerHTML = `<div class="flex items-center gap-6 flex-1 text-left" onclick="window.login('${id}', '${name}')"><div class="w-16 h-16 avatar-gradient rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl uppercase text-center">${name[0]}</div><div><p class="font-black text-slate-800 text-xl tracking-tighter italic text-left leading-tight text-left">${name}</p><span class="inline-block mt-1 px-3 py-1 rounded-full text-[9px] font-black uppercase ${isLocal ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm'}">${isLocal ? 'Offline' : 'Active'}</span></div></div><button class="delete-user-btn p-4 text-slate-200 hover:text-rose-500 transition-all rounded-[1.5rem] hover:bg-rose-50 active:rotate-12"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button>`; el.querySelector('.delete-user-btn').onclick = (e) => { e.stopPropagation(); deleteType = 'user'; deleteCandidateId = id; document.getElementById('confirm-title').innerText = "彻底删除该档案？"; document.getElementById('confirm-modal').classList.remove('hidden'); }; list.appendChild(el); }
 
         window.init();
     </script>
