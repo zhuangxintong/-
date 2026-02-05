@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/proxy/gemini/:path*",
+      "destination": "https://generativelanguage.googleapis.com/:path*"
+    }
+  ]
+}
