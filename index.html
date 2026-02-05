@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>俄语智能记忆助手 - ITMO Pro 深度定制版</title>
+    <title>俄语智能记忆助手 - ITMO Pro 本地版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans:wght@400;700&display=swap');
@@ -23,7 +23,7 @@
             line-height: 1.6;
         }
 
-        /* 翻转卡片布局：确保高度足够并处理内容溢出 */
+        /* 翻转卡片布局优化：内容与按钮物理隔离 */
         .flip-card { perspective: 1200px; height: 620px; width: 100%; max-width: 480px; }
         .flip-card-inner {
             position: relative; width: 100%; height: 100%;
@@ -35,7 +35,7 @@
             position: absolute; width: 100%; height: 100%;
             backface-visibility: hidden;
             display: flex; flex-direction: column; border-radius: 2.5rem;
-            padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+            padding: 2.2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
             background: white; border: 1px solid #f1f5f9;
         }
         .flip-card-back { transform: rotateY(180deg); }
@@ -44,12 +44,6 @@
         .user-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px -10px rgba(99, 102, 241, 0.15); }
 
         .avatar-gradient { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }
-
-        .status-indicator { width: 10px; height: 10px; border-radius: 50%; transition: all 0.5s; }
-        .status-indicator.online { background-color: #10b981; box-shadow: 0 0 12px #10b981; animation: pulse-green 2s infinite; }
-        .status-indicator.offline { background-color: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
-
-        @keyframes pulse-green { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.6; } }
 
         #toast-msg { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translate(-50%, 100px); z-index: 200; }
         #toast-msg.show { transform: translate(-50%, -40px); opacity: 1; }
@@ -63,23 +57,17 @@
             -webkit-appearance: none; height: 26px; width: 26px; border-radius: 50%;
             background: #6366f1; cursor: pointer; border: 4px solid white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); margin-top: -9px;
         }
-
-        .loading-spinner {
-            border: 3px solid #f1f5f9; border-top: 3px solid #6366f1;
-            border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 md:p-10">
 
-    <div id="toast-msg" class="fixed bottom-0 left-1/2 bg-slate-900 text-white px-8 py-3.5 rounded-full text-xs font-black shadow-2xl opacity-0 pointer-events-none tracking-widest uppercase">SYCNED</div>
+    <div id="toast-msg" class="fixed bottom-0 left-1/2 bg-slate-900 text-white px-8 py-3.5 rounded-full text-xs font-black shadow-2xl opacity-0 pointer-events-none tracking-widest uppercase tracking-widest">SAVED</div>
 
-    <!-- 确认删除弹窗 -->
+    <!-- 确认操作弹窗 -->
     <div id="confirm-modal" class="hidden fixed inset-0 z-[150] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
         <div class="bg-white w-full max-w-xs rounded-[2.5rem] p-8 shadow-2xl text-center border border-slate-100">
             <h3 id="confirm-title" class="text-lg font-black text-slate-900 mb-2 italic">确定执行吗？</h3>
-            <p id="confirm-desc" class="text-xs text-slate-500 mb-8 leading-relaxed">该操作不可撤销。</p>
+            <p id="confirm-desc" class="text-xs text-slate-500 mb-8 leading-relaxed">数据移除后无法找回。</p>
             <div class="flex gap-3">
                 <button onclick="window.closeConfirmModal()" class="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold btn-active">取消</button>
                 <button id="confirm-ok-btn" class="flex-1 py-4 rounded-2xl bg-rose-500 text-white font-black">确定</button>
@@ -87,42 +75,28 @@
         </div>
     </div>
 
-    <!-- 1. 档案选择界面 -->
+    <!-- 1. 档案选择界面 (LocalStorage 纯本地版) -->
     <div id="view-user-select" class="w-full max-w-md main-container space-y-12 py-8 text-center">
         <header>
             <div class="inline-flex items-center gap-2 bg-white/60 px-4 py-1.5 rounded-full border border-white mb-8 shadow-sm">
-                <span id="system-badge" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest italic">ITMO Linguistic Engine v7.0</span>
+                <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest italic">ITMO Pure Local v1.0</span>
             </div>
             <h1 class="text-6xl font-black text-slate-900 tracking-tighter mb-2 italic uppercase">Привет!</h1>
-            <p class="text-slate-400 text-sm font-medium tracking-tight">AI 原型智能分析 · 记忆曲线调度</p>
+            <p class="text-slate-400 text-sm font-medium tracking-tight">AI 辅助精修 · 纯本地存储</p>
         </header>
         
         <div id="user-list-container">
-            <div id="loading-area" class="flex flex-col items-center justify-center py-16 space-y-6">
-                <div id="spinner-box" class="flex flex-col items-center gap-3">
-                    <div class="loading-spinner"></div>
-                    <p id="auth-status-text" class="text-[10px] text-slate-400 font-black uppercase tracking-widest italic">正在尝试连接云端...</p>
-                </div>
-                <!-- 修复一直转圈：5秒后自动显示本地选项 -->
-                <div id="connection-fallback" class="hidden space-y-4 w-full">
-                    <p class="text-xs text-rose-500 font-bold">连接超时，请选择：</p>
-                    <div class="flex flex-col gap-3">
-                        <button onclick="location.reload()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">刷新并重试</button>
-                        <button onclick="window.switchToOfflineMode()" class="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-black">直接进入本地模式</button>
-                    </div>
-                </div>
-            </div>
             <div id="user-list" class="user-grid"></div>
         </div>
 
         <div class="pt-8 border-t border-slate-200">
             <div class="flex gap-3 p-2 bg-white rounded-[1.8rem] shadow-xl shadow-indigo-100/20 border border-slate-100">
                 <input id="new-user-input" type="text" placeholder="输入新档案名称..." class="flex-1 px-5 py-4 rounded-2xl bg-slate-50 border-none outline-none font-bold text-left text-slate-700 text-sm">
-                <button onclick="window.addUser()" class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black btn-active shadow-lg shadow-indigo-100">添加</button>
+                <button onclick="window.addUser()" class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black btn-active shadow-lg">添加</button>
             </div>
             <div class="mt-8 flex items-center justify-center gap-3">
-                <div id="status-dot" class="status-indicator"></div>
-                <p id="mode-notice" class="text-[10px] text-slate-400 uppercase font-black tracking-widest italic leading-none italic">等待身份验证...</p>
+                <div class="status-indicator online"></div>
+                <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest italic">Local Engine Running</p>
             </div>
         </div>
     </div>
@@ -130,21 +104,20 @@
     <!-- 2. 主界面 -->
     <div id="view-home" class="hidden w-full max-w-md main-container space-y-6">
         <header class="flex justify-between items-center py-4">
-            <div class="text-left">
-                <h2 id="current-user-name" class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none text-left">用户</h2>
+            <div class="text-left text-left text-left">
+                <h2 id="current-user-name" class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none">用户</h2>
                 <div class="flex items-center gap-2 mt-2">
                     <span id="target-display" class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">每日计划: 50 词</span>
                 </div>
             </div>
             <div class="flex gap-2">
-                <button onclick="window.manualSyncCloud()" class="p-3 bg-white rounded-2xl border border-slate-200 text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg></button>
-                <button onclick="location.reload()" class="p-3 bg-slate-50 rounded-2xl text-slate-400 text-[10px] font-black tracking-widest uppercase">退出</button>
+                <button onclick="location.reload()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-400 text-[10px] font-black tracking-widest uppercase">登出</button>
             </div>
         </header>
 
         <div class="bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm text-left">
             <div class="flex justify-between items-center mb-6">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">设定今日目标</label>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">设定今日复习目标</label>
                 <span id="slider-val" class="text-xl font-black text-indigo-600 italic leading-none">50 词</span>
             </div>
             <input type="range" id="daily-target-slider" min="1" max="200" value="50" class="w-full">
@@ -152,10 +125,10 @@
 
         <div id="session-card" class="bg-indigo-600 rounded-[3rem] p-8 text-white shadow-2xl shadow-indigo-100 relative overflow-hidden text-left transition-transform hover:scale-[1.01]">
             <div class="relative z-10">
-                <p id="scheduler-status-text" class="text-indigo-200 text-[10px] font-black uppercase tracking-widest mb-1 italic italic">Smart Scheduler</p>
-                <h3 id="due-count" class="text-4xl font-black text-white leading-tight italic tracking-tighter text-left">0 词计划中</h3>
-                <div id="plan-breakdown" class="text-[10px] text-indigo-100 mt-2 font-medium opacity-80 italic tracking-wide text-left italic">分析同步任务中...</div>
-                <button onclick="window.startSmartSession()" id="start-due-btn" class="mt-8 bg-white text-indigo-700 px-8 py-4 rounded-[1.5rem] text-sm font-black shadow-xl active:scale-95 transition-all uppercase tracking-widest">开始学习</button>
+                <p class="text-indigo-200 text-[10px] font-black uppercase tracking-widest mb-1 italic">Memory Scheduler</p>
+                <h3 id="due-count" class="text-4xl font-black text-white leading-tight italic tracking-tighter">0 词计划中</h3>
+                <div id="plan-breakdown" class="text-[10px] text-indigo-100 mt-2 font-medium opacity-80 italic tracking-wide text-left">正在扫描本地库...</div>
+                <button onclick="window.startSmartSession()" id="start-due-btn" class="mt-8 bg-white text-indigo-700 px-8 py-4 rounded-[1.5rem] text-sm font-black shadow-xl active:scale-95 transition-all uppercase tracking-widest">开始今日计划</button>
             </div>
             <svg class="absolute right-[-30px] bottom-[-30px] opacity-10" width="180" height="180" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
         </div>
@@ -163,18 +136,17 @@
         <div id="library-list" class="space-y-4"></div>
 
         <button onclick="window.showCreateView()" class="w-full py-6 bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] text-slate-500 font-black hover:border-indigo-500 hover:text-indigo-600 transition-all uppercase tracking-widest text-sm active:scale-95 shadow-sm">
-            + 管理或新建词库
+            + 管理或新建本地词库
         </button>
     </div>
 
     <!-- 3. 学习模式 -->
     <div id="view-learn" class="hidden w-full max-w-md main-container min-h-[85vh] flex flex-col items-center">
         <header class="w-full flex justify-between items-center py-6 px-2">
-            <button onclick="window.showHomeView()" class="px-5 py-2.5 bg-white rounded-2xl border border-slate-100 text-slate-900 font-black text-[10px] shadow-sm tracking-widest uppercase">返回</button>
-            <div class="text-center">
+            <button onclick="window.showHomeView()" class="px-5 py-2.5 bg-white rounded-2xl border border-slate-100 text-slate-900 font-black text-[10px] shadow-sm tracking-widest uppercase">Exit</button>
+            <div class="text-center text-center">
                 <p id="learn-progress" class="text-xl font-black text-slate-900 tracking-tighter leading-none">0 / 0</p>
-                <p id="learn-mode-text" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mt-1 italic leading-none">Dual Path</p>
-                <p id="learn-title" class="hidden"></p>
+                <p id="learn-mode-text" class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mt-1 italic">Bidirectional Path</p>
             </div>
             <div class="w-12"></div>
         </header>
@@ -182,15 +154,14 @@
         <div id="card-container" class="flip-card mt-2">
             <div class="flip-card-inner" id="card-inner">
                 <div class="flip-card-front justify-center items-center" onclick="window.flipCard(event)">
-                    <span id="card-front-hint" class="text-slate-400 text-[10px] uppercase font-black mb-12 tracking-widest opacity-60 italic text-center leading-none tracking-tight">想一想它的释义 · 点击翻转</span>
+                    <span id="card-front-hint" class="text-slate-400 text-[10px] uppercase font-black mb-12 tracking-widest opacity-60 italic text-center leading-none tracking-tight">想一想结果 · 点击翻转</span>
                     <div id="word-display" class="russian-text text-5xl font-black text-slate-800 mb-16 text-center leading-tight tracking-tighter italic">...</div>
                     
-                    <!-- 垂直堆叠，防按钮遮挡 -->
                     <div class="w-full flex flex-col gap-4 mt-auto" onclick="event.stopPropagation()">
                         <button onclick="window.submitReview(3)" class="w-full bg-emerald-500 text-white py-5 rounded-[2rem] font-black shadow-xl active:scale-95 transition-all text-sm tracking-widest uppercase leading-none">掌握了 (稳步前进)</button>
                         <div class="grid grid-cols-2 gap-4">
-                            <button onclick="window.flipCard(event)" class="bg-amber-50 text-amber-700 py-4.5 rounded-[1.5rem] font-black border border-amber-100 active:scale-95 transition-all text-xs">记不清</button>
-                            <button onclick="window.flipCard(event)" class="bg-rose-50 text-rose-700 py-4.5 rounded-[1.5rem] font-black border border-rose-100 active:scale-95 transition-all text-xs">忘了</button>
+                            <button onclick="window.flipCard(event)" class="bg-amber-50 text-amber-700 py-4.5 rounded-[1.5rem] font-black border border-amber-100 active:scale-95 transition-all text-xs tracking-widest">记不清</button>
+                            <button onclick="window.flipCard(event)" class="bg-rose-50 text-rose-700 py-4.5 rounded-[1.5rem] font-black border border-rose-100 active:scale-95 transition-all text-xs tracking-widest leading-none">忘了</button>
                         </div>
                     </div>
                 </div>
@@ -201,16 +172,16 @@
                                 <p id="word-back" class="russian-text text-3xl font-black text-indigo-600 tracking-tighter leading-tight italic">...</p>
                                 <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].word)" class="p-2.5 bg-indigo-50 text-indigo-600 rounded-full active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
                             </div>
-                            <p id="meaning-back" class="text-xl font-bold text-slate-900 mt-2 font-black leading-tight">...</p>
+                            <p id="meaning-back" class="text-xl font-bold text-slate-900 mt-2 font-black leading-tight italic">...</p>
                         </div>
                         <div class="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 mb-6 text-left">
-                            <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.1em] mb-1 italic leading-none">语法背景与原型</p>
+                            <p class="text-[9px] font-black text-indigo-400 uppercase tracking-[0.1em] mb-1 italic leading-none">语法与原型背景</p>
                             <p id="grammar-back" class="text-[13px] text-slate-700 leading-relaxed font-medium italic">...</p>
                         </div>
                         <div class="mb-10 text-left">
                             <div class="flex items-center gap-2 mb-3 text-left">
                                 <button onclick="window.playStaticVoice(window.sessionWords[window.currentIndex].example)" class="p-2 bg-indigo-50 text-indigo-600 rounded-full scale-75 origin-left"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button>
-                                <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none">经典例句</span>
+                                <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none tracking-widest">例句分析</span>
                             </div>
                             <p id="example-back" class="russian-text text-[15px] italic text-slate-700 leading-snug font-bold">...</p>
                             <p id="example-cn-back" class="text-xs text-slate-400 mt-3 font-medium italic text-left">...</p>
@@ -218,64 +189,53 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4 pt-4 mt-auto">
                         <button onclick="window.submitReview(1)" class="bg-slate-100 text-slate-600 py-5 rounded-[1.8rem] font-black active:scale-95 text-xs tracking-widest uppercase">再背一次</button>
-                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-5 rounded-[1.8rem] font-black active:scale-95 shadow-xl shadow-indigo-100 text-xs tracking-widest leading-none">记住了</button>
+                        <button onclick="window.submitReview(2)" class="bg-indigo-600 text-white py-5 rounded-[1.8rem] font-black active:scale-95 shadow-xl shadow-indigo-100 text-xs tracking-widest leading-none uppercase">记住了</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 4. 词库详情列表 -->
+    <!-- 4. 词库详情清单 -->
     <div id="view-word-list" class="hidden w-full max-w-md main-container space-y-6 pb-12 text-left">
-        <header class="flex items-center gap-4 py-8 text-left">
-            <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
-            <div class="text-left text-left">
-                <h2 id="word-list-title" class="text-2xl font-black text-slate-900 tracking-tighter italic leading-none">词库清单</h2>
-                <p id="word-list-count" class="text-[11px] text-indigo-500 font-bold uppercase tracking-widest mt-2 italic text-left leading-none">Vocabulary Summary</p>
+        <header class="flex items-center gap-4 py-8 text-left text-left">
+            <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm active:scale-90 transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
+            <div class="text-left text-left text-left">
+                <h2 id="word-list-title" class="text-2xl font-black text-slate-900 tracking-tighter italic leading-none text-left italic">库内单词</h2>
+                <p id="word-list-count" class="text-[11px] text-indigo-500 font-bold uppercase tracking-widest mt-2 italic text-left leading-none italic text-left text-left">Records Summary</p>
             </div>
         </header>
-        <div id="word-list-container" class="space-y-3 text-left"></div>
+        <div id="word-list-container" class="space-y-3"></div>
     </div>
 
-    <!-- 5. 内容编辑器 (AI 深度分析) -->
+    <!-- 5. 本地内容编辑器 (AI 深度解析支持) -->
     <div id="view-create" class="hidden w-full max-w-md main-container space-y-6 pb-12 text-left">
-        <header class="flex items-center gap-4 py-8 text-left">
+        <header class="flex items-center gap-4 py-8 text-left text-left">
             <button onclick="window.showHomeView()" class="p-4 bg-white rounded-2xl border border-slate-100 text-slate-500 shadow-sm transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg></button>
             <h2 class="text-3xl font-black text-slate-900 tracking-tighter italic leading-none">内容编辑</h2>
         </header>
         <div class="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl shadow-indigo-100/10 text-left">
             <div class="mb-8 text-left">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none">词库标题</label>
-                <input id="create-lib-name" type="text" placeholder="例如：日常生活常用词" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none font-black text-slate-800">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic text-left">词库标题</label>
+                <input id="create-lib-name" type="text" placeholder="例如：日常生活常用词" class="w-full px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none font-black text-slate-800 text-left text-left">
             </div>
             <div class="relative text-left">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none">AI 智能解析 (支持变位/变格词自动还原)</label>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3 ml-1 text-left leading-none italic text-left">AI 智能解析 (自动溯源变位原型并标重音)</label>
                 <div class="flex gap-3 text-left">
-                    <input id="ai-word-input" type="text" placeholder="输入单词(如 читаю)..." class="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold">
-                    <button id="ai-gen-btn" onclick="window.generateWord()" class="bg-indigo-600 text-white px-7 py-4 rounded-2xl font-black btn-active shadow-lg">生成</button>
+                    <input id="ai-word-input" type="text" placeholder="输入单词 (如 читаю)..." class="flex-1 px-6 py-4 rounded-2xl bg-slate-50 border-none outline-none focus:ring-1 focus:ring-indigo-500 font-bold text-left">
+                    <button id="ai-gen-btn" onclick="window.generateWord()" class="bg-indigo-600 text-white px-7 py-4 rounded-2xl font-black btn-active shadow-lg">录入</button>
                 </div>
-                <div id="ai-status" class="hidden mt-4 flex items-center gap-3 text-xs text-indigo-600 font-black italic"><div class="loading-spinner scale-50"></div> 正在识别原型并标注重音...</div>
+                <div id="ai-status" class="hidden mt-4 flex items-center gap-3 text-xs text-indigo-600 font-black italic"><div class="loading-spinner scale-50"></div> 正在精准提取语义与变位背景...</div>
             </div>
         </div>
         <div id="temp-words" class="space-y-4 max-h-[35vh] overflow-y-auto pr-2 mt-4 hide-scrollbar"></div>
-        <button onclick="window.saveLibraryAction()" id="save-lib-btn" class="w-full bg-slate-900 text-white py-6 rounded-[2.2rem] font-black shadow-2xl hover:scale-[1.02] transition-all tracking-widest uppercase leading-none">保存并同步</button>
+        <button onclick="window.saveLibraryAction()" id="save-lib-btn" class="w-full bg-slate-900 text-white py-6 rounded-[2.2rem] font-black shadow-2xl hover:scale-[1.02] transition-all tracking-widest uppercase leading-none">保存至本地档案</button>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // 配置读取
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "" };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'itmo-ru-smart-v7';
-        const apiKey = ""; // Gemini API Key handled externally
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        let isOfflineMode = false, currentUserProfile = null;
+        const apiKey = ""; // Gemini API Key
+        
+        let currentUserProfile = null;
         let allLibraries = [], userProgress = {};
         window.sessionWords = []; window.currentIndex = 0;
         let tempWordsForLib = [], editingLibraryId = null;
@@ -283,7 +243,7 @@
         let wordDeleteRef = { libId: null, wordIndex: null };
         const STAGES = [0, 1, 2, 4, 7, 15, 30, 90, 180];
 
-        // --- 全局函数挂载 ---
+        // --- 全局交互函数挂载 ---
         window.showToast = (msg) => {
             const el = document.getElementById('toast-msg');
             if(el) { el.innerText = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); }
@@ -292,16 +252,7 @@
         window.renderTempWords = () => {
             const cont = document.getElementById('temp-words');
             if(!cont) return;
-            cont.innerHTML = tempWordsForLib.map((w, i) => `<div class="bg-white p-5 rounded-3xl border border-slate-100 flex justify-between items-center shadow-sm text-left mb-2 transition-all hover:border-indigo-100"><div class="flex-1 text-left"><p class="font-black russian-text text-xl italic leading-none">${w.word}</p><p class="text-[11px] text-slate-400 font-bold uppercase mt-1 leading-none tracking-tighter italic text-left">${w.meaning}</p></div><button onclick="window.removeTempWord(${i})" class="text-rose-300 p-3 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>`).join('');
-        };
-
-        window.switchToOfflineMode = () => {
-            isOfflineMode = true;
-            document.getElementById('loading-area').classList.add('hidden');
-            document.getElementById('status-dot').className = "status-indicator offline";
-            document.getElementById('mode-notice').innerText = "Standalone Local Mode";
-            document.getElementById('system-badge').innerText = "ITMO LOCAL ENGINE";
-            renderUserList();
+            cont.innerHTML = tempWordsForLib.map((w, i) => `<div class="bg-white p-5 rounded-3xl border border-slate-100 flex justify-between items-center shadow-sm text-left mb-2 transition-all hover:border-indigo-100"><div class="flex-1 text-left"><p class="font-black russian-text text-xl italic leading-none text-left">${w.word}</p><p class="text-[11px] text-slate-400 font-bold uppercase mt-1 leading-none tracking-tighter italic text-left">${w.meaning}</p></div><button onclick="window.removeTempWord(${i})" class="text-rose-300 p-3 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>`).join('');
         };
 
         window.login = (id, name) => {
@@ -327,14 +278,34 @@
             loadCoreData();
         };
 
-        window.removeTempWord = (index) => { tempWordsForLib.splice(index, 1); window.renderTempWords(); };
-        window.closeConfirmModal = () => document.getElementById('confirm-modal').classList.add('hidden');
-        window.flipCard = (e) => { if(e) e.stopPropagation(); document.getElementById('card-container').classList.toggle('flipped'); };
-        window.showHomeView = () => { document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-home').classList.remove('hidden'); window.updateSchedulerInfo(); renderLibraryList(); };
-        window.showCreateView = () => { editingLibraryId = null; tempWordsForLib = []; window.renderTempWords(); document.getElementById('create-lib-name').value = ""; document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-create').classList.remove('hidden'); };
-        window.editLibrary = (id) => { const lib = allLibraries.find(l => l.id === id); if(!lib) return; editingLibraryId = id; tempWordsForLib = [...lib.words]; document.getElementById('create-lib-name').value = lib.name; window.renderTempWords(); document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-create').classList.remove('hidden'); };
+        function loadCoreData() {
+            userProgress = JSON.parse(localStorage.getItem(`itmo_prog_${currentUserProfile.id}`) || '{}');
+            allLibraries = JSON.parse(localStorage.getItem('itmo_libs') || '[]');
+            renderLibraryList();
+            window.updateSchedulerInfo();
+        }
 
-        // --- AI 深度语义解析 ---
+        window.addUser = () => {
+            const input = document.getElementById('new-user-input');
+            const name = input.value.trim();
+            if (!name) return;
+            const locals = JSON.parse(localStorage.getItem('itmo_users') || '[]');
+            locals.push({ id: 'u_' + Date.now(), name });
+            localStorage.setItem('itmo_users', JSON.stringify(locals));
+            input.value = '';
+            renderUserList();
+        };
+
+        function renderUserList() {
+            const list = document.getElementById('user-list');
+            const locals = JSON.parse(localStorage.getItem('itmo_users') || '[]');
+            list.innerHTML = '';
+            if (locals.length === 0) {
+                list.innerHTML = `<div onclick="window.login('guest', '默认档案')" class="user-card p-12 rounded-[2.5rem] border-2 border-dashed border-indigo-50 flex flex-col items-center gap-2 cursor-pointer text-slate-300 italic font-black uppercase text-xs text-center">Create Local Profile</div>`;
+            } else { locals.forEach(u => renderUserItem(u.id, u.name)); }
+        }
+
+        // --- AI 语义深度解析核心 (本地调用) ---
         window.generateWord = async () => {
             const input = document.getElementById('ai-word-input');
             const word = input.value.trim(); if(!word) return;
@@ -342,33 +313,65 @@
             const status = document.getElementById('ai-status');
             btn.disabled = true; status.classList.remove('hidden');
             try {
-                const systemPrompt = `你是一位专业的俄语教师。请为提供的俄语输入生成详细的 JSON 对象。
+                const systemPrompt = `你是一位专业的俄语教师。请为提供的俄语输入生成详细的词条 JSON。
                 逻辑指令：
-                1. **原型还原(Lemma)**：如果输入词是变位/变格形式，务必识别其原型词，并作为"word"字段。
-                2. **重音标注**：在"word"原型的重读元音后加 \\u0301 (Unicode)。
+                1. **原型还原(Lemma)**：如果输入词是变位词、变格形式，务必识别其原型形式并填入 "word" 字段。
+                2. **标标注精准重音**：在 "word" 原型词条重读元音后加 \\u0301 (Unicode)。
                 3. **极其详尽语法解析**：
-                   - 动词：注明体(完成/未完成)、体对。若输入是变位，请注明“这是...的变位”，给出 1, 2, 3 人称单数变位。
-                   - 动名词：务必注明对应的动词原型。
-                   - 短尾形容词：对应长尾原形，写明性数。
-                4. 造一个典型例句，所有俄语单词标重音。
-                仅返回 JSON 数据: {"word": "原型词词条", "meaning": "含义", "grammar": "背景分析", "example": "俄语例句", "exampleCn": "例句翻译"}`;
+                   - 动词：注明体(完成/未完成)及其体对。如果是变体输入，开头注明“这是...的变位”。给出1,2,3人称变位规律。
+                   - 动名词：务必追溯其对应的动词原型。
+                   - 短尾形容词：对应长尾原形。
+                   - 名词：注明性、数及变格特点。
+                4. 造典型例句，所有俄语单词标重音。
+                仅返回 JSON 格式数据: {"word": "...", "meaning": "...", "grammar": "...", "example": "...", "exampleCn": "..."}`;
                 
                 const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: `输入: ${word}` }] }], systemInstruction: { parts: [{ text: systemPrompt }] }, generationConfig: { responseMimeType: "application/json" } })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `输入词条: ${word}` }] }], systemInstruction: { parts: [{ text: systemPrompt }] }, generationConfig: { responseMimeType: "application/json" } })
                 });
                 const res = await resp.json();
                 const data = JSON.parse(res.candidates[0].content.parts[0].text);
                 tempWordsForLib.unshift(data); window.renderTempWords(); input.value = '';
-            } catch(e) { window.showToast("AI 解析失败，请检查拼写"); } 
+            } catch(e) { window.showToast("AI 解析超时"); } 
             finally { btn.disabled = false; status.classList.add('hidden'); }
+        };
+
+        window.saveLibraryAction = () => {
+            const name = document.getElementById('create-lib-name').value.trim();
+            if(!name || tempWordsForLib.length === 0) return window.showToast("名称和内容必填");
+            
+            const data = { name, words: tempWordsForLib, updatedAt: Date.now() };
+            let libs = JSON.parse(localStorage.getItem('itmo_libs') || '[]');
+            
+            if (editingLibraryId) {
+                libs = libs.map(l => l.id === editingLibraryId ? { id: l.id, ...data } : l);
+            } else {
+                libs.push({ id: 'l_' + Date.now(), ...data });
+            }
+            
+            // 关键：立即更新内存中的 allLibraries，确保主页可见
+            allLibraries = libs;
+            localStorage.setItem('itmo_libs', JSON.stringify(libs));
+            window.showToast("已保存到本地");
+            window.showHomeView();
+        };
+
+        window.editLibrary = (id) => {
+            const lib = allLibraries.find(l => l.id === id);
+            if(!lib) return;
+            editingLibraryId = id;
+            tempWordsForLib = [...lib.words];
+            document.getElementById('create-lib-name').value = lib.name;
+            window.renderTempWords();
+            document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById('view-create').classList.remove('hidden');
         };
 
         function getDailyPlan() { return JSON.parse(localStorage.getItem(`itmo_plan_${currentUserProfile.id}`) || '{"target": 50}'); }
 
         window.updateSchedulerInfo = () => {
-            if (!currentUserProfile || (isOfflineMode === false && !auth.currentUser)) return;
+            if (!currentUserProfile) return;
             const target = getDailyPlan().target;
             const now = Date.now();
             let overdue = [], pool = [];
@@ -381,14 +384,15 @@
                 });
             });
             const actualCount = Math.min(target, overdue.length + pool.length);
+            const statusText = document.getElementById('due-count');
             const la = document.getElementById('plan-breakdown');
             if (actualCount === 0 && overdue.length === 0 && pool.length === 0) {
-                document.getElementById('due-count').innerText = "库内无词";
-                la.innerText = "请添加单词或开启计划";
+                statusText.innerText = "库内无词";
+                la.innerText = "请在下方录入新词";
                 document.getElementById('start-due-btn').disabled = true;
             } else {
-                document.getElementById('due-count').innerText = `${actualCount} 词计划中`;
-                la.innerText = `过期复习: ${overdue.length} | 补位新词: ${Math.max(0, actualCount - overdue.length)}`;
+                statusText.innerText = `${actualCount} 词计划中`;
+                la.innerText = `过期复习: ${overdue.length} | 智能补位: ${Math.max(0, actualCount - overdue.length)}`;
                 document.getElementById('start-due-btn').disabled = false;
             }
         };
@@ -408,7 +412,7 @@
             overduePool.sort((a, b) => b.p - a.p);
             let session = overduePool.map(o => o.w).slice(0, target);
             if (session.length < target) session = session.concat(unseenPool.slice(0, target - session.length));
-            if (session.length === 0) { window.showToast("今日暂无任务"); return; }
+            if (session.length === 0) { window.showToast("任务已完成"); return; }
             window.sessionWords = session.map(w => ({ ...w, mode: Math.random() > 0.5 ? 'RuToCn' : 'CnToRu' })).sort(() => Math.random() - 0.5);
             window.currentIndex = 0;
             document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden'));
@@ -416,29 +420,13 @@
             renderCard();
         };
 
-        window.saveLibraryAction = async () => {
-            const name = document.getElementById('create-lib-name').value.trim();
-            if(!name || tempWordsForLib.length === 0) return window.showToast("名称和单词内容必填");
-            const data = { name, words: tempWordsForLib, updatedAt: Date.now() };
-            if (!isOfflineMode) { 
-                if (editingLibraryId) await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'libraries', editingLibraryId), data, { merge: true }); 
-                else await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'libraries'), data); 
-            } else {
-                let libs = JSON.parse(localStorage.getItem('itmo_libs') || '[]');
-                if (editingLibraryId) libs = libs.map(l => l.id === editingLibraryId ? {id: l.id, ...data} : l);
-                else libs.push({id: 'l_'+Date.now(), ...data});
-                localStorage.setItem('itmo_libs', JSON.stringify(libs));
-            }
-            window.showHomeView();
-        };
-
-        window.submitReview = async (f) => {
+        window.submitReview = (f) => {
             const w = window.sessionWords[window.currentIndex]; const key = btoa(encodeURIComponent(w.word));
             const p = userProgress[key] || { level: 0 };
             let nextLvl = f === 3 ? Math.min(STAGES.length - 1, (p.level || 0) + 1) : 0;
             const nextDate = Date.now() + (STAGES[nextLvl] * 86400000);
-            if (!isOfflineMode) { try { await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, currentUserProfile.id, key), { level: nextLvl, nextReview: nextDate }); } catch(e) {} } 
-            else { userProgress[key] = { level: nextLvl, nextReview: nextDate }; localStorage.setItem(`itmo_prog_${currentUserProfile.id}`, JSON.stringify(userProgress)); }
+            userProgress[key] = { level: nextLvl, nextReview: nextDate };
+            localStorage.setItem(`itmo_prog_${currentUserProfile.id}`, JSON.stringify(userProgress));
             window.currentIndex++; renderCard();
         };
 
@@ -456,71 +444,35 @@
             document.getElementById('card-container').classList.remove('flipped');
         }
 
-        // --- 初始化核心 ---
-        window.init = async () => {
-            const authTimeout = setTimeout(() => { if (!currentUserProfile && !isOfflineMode) { document.getElementById('spinner-box').classList.add('hidden'); document.getElementById('connection-fallback').classList.remove('hidden'); } }, 5000);
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } else { await signInAnonymously(auth); }
-                onAuthStateChanged(auth, (user) => {
-                    if (user && user.uid) {
-                        clearTimeout(authTimeout);
-                        isOfflineMode = false;
-                        document.getElementById('status-dot').className = "status-indicator online";
-                        document.getElementById('mode-notice').innerText = "ITMO Cloud Ready";
-                        document.getElementById('loading-area').classList.add('hidden');
-                        renderUserList();
-                    }
-                });
-            } catch (err) { switchToOfflineMode(); }
-        };
+        window.showCreateView = () => { editingLibraryId = null; tempWordsForLib = []; window.renderTempWords(); document.getElementById('create-lib-name').value = ""; document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-create').classList.remove('hidden'); };
+        window.showHomeView = () => { document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-home').classList.remove('hidden'); window.updateSchedulerInfo(); renderLibraryList(); };
+        window.flipCard = (e) => { if(e) e.stopPropagation(); document.getElementById('card-container').classList.toggle('flipped'); };
+        window.closeConfirmModal = () => document.getElementById('confirm-modal').classList.add('hidden');
+        window.removeTempWord = (index) => { tempWordsForLib.splice(index, 1); window.renderTempWords(); };
 
-        function renderUserList() {
-            if (isOfflineMode) { renderLocalUserList(); return; }
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snap) => {
-                const list = document.getElementById('user-list');
-                list.innerHTML = '';
-                if (snap.empty) list.innerHTML = '<p class="text-center text-slate-400 py-16 font-bold uppercase text-xs">Ready for profiles</p>';
-                else snap.forEach(d => renderUserItem(d.id, d.data().name));
-            }, (err) => { console.error(err); window.switchToOfflineMode(); });
-        }
-
-        function loadCoreData() {
-            if (isOfflineMode) {
-                userProgress = JSON.parse(localStorage.getItem(`itmo_prog_${currentUserProfile.id}`) || '{}');
-                allLibraries = JSON.parse(localStorage.getItem('itmo_libs') || '[]');
-                renderLibraryList(); window.updateSchedulerInfo(); return;
-            }
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'libraries'), (snap) => { allLibraries = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderLibraryList(); window.updateSchedulerInfo(); });
-            onSnapshot(collection(db, 'artifacts', appId, 'users', auth.currentUser.uid, currentUserProfile.id), (snap) => { userProgress = {}; snap.forEach(d => userProgress[d.id] = d.data()); window.updateSchedulerInfo(); });
-        }
-
-        function renderLibraryList() { const list = document.getElementById('library-list'); list.innerHTML = allLibraries.map(lib => `<div class="bg-white p-7 rounded-[2.8rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all text-left hover:border-indigo-200"><div onclick="window.startLearnLibrary('${lib.id}')" class="flex-1 cursor-pointer"><p class="font-black text-slate-800 russian-text italic text-2xl leading-tight">${lib.name}</p><p class="text-[10px] text-slate-400 font-black mt-2 uppercase tracking-widest">${lib.words.length} Vocabulary Items</p></div><div class="flex gap-2"><button onclick="window.viewLibraryWords('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button onclick="window.editLibrary('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div></div>`).join(''); }
-        window.viewLibraryWords = (id) => { const lib = allLibraries.find(l => l.id === id); if (!lib) return; const cont = document.getElementById('word-list-container'); document.getElementById('word-list-title').innerText = lib.name; document.getElementById('word-list-count').innerText = `Records: ${lib.words.length}`; cont.innerHTML = lib.words.map((w, i) => `<div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-between items-center text-left mb-1 transition-all hover:border-indigo-100"><div><p class="font-black text-slate-800 russian-text italic text-xl leading-tight tracking-tighter text-left">${w.word}</p><p class="text-xs text-slate-500 mt-2 font-medium text-left">${w.meaning}</p></div><div class="flex items-center gap-1"><button onclick="window.playStaticVoice('${w.word.replace(/\u0301/g, '')}')" class="p-3 bg-indigo-50 text-indigo-600 rounded-full active:scale-90 shadow-sm transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button><button onclick="window.showWordDeleteConfirm('${lib.id}', ${i}, '${w.word}')" class="p-3 text-rose-300 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>`).join(''); document.getElementById('view-home').classList.add('hidden'); document.getElementById('view-word-list').classList.remove('hidden'); };
+        function renderLibraryList() { const list = document.getElementById('library-list'); list.innerHTML = allLibraries.map(lib => `<div class="bg-white p-7 rounded-[2.8rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all text-left hover:border-indigo-200"><div onclick="window.startLearnLibrary('${lib.id}')" class="flex-1 cursor-pointer"><p class="font-black text-slate-800 russian-text italic text-2xl leading-tight text-left text-left">${lib.name}</p><p class="text-[10px] text-slate-400 font-black mt-2 uppercase tracking-widest text-left text-left">${lib.words.length} Vocabulary Items</p></div><div class="flex gap-2 text-left text-left"><button onclick="window.viewLibraryWords('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button onclick="window.editLibrary('${lib.id}')" class="p-3.5 text-slate-300 hover:text-indigo-600 transition-colors active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div></div>`).join(''); }
+        window.viewLibraryWords = (id) => { const lib = allLibraries.find(l => l.id === id); if (!lib) return; const cont = document.getElementById('word-list-container'); document.getElementById('word-list-title').innerText = lib.name; document.getElementById('word-list-count').innerText = `Records: ${lib.words.length}`; cont.innerHTML = lib.words.map((w, i) => `<div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-between items-center text-left mb-1 transition-all hover:border-indigo-100"><div><p class="font-black text-slate-800 russian-text italic text-xl leading-tight tracking-tighter text-left text-left text-left leading-tight">${w.word}</p><p class="text-xs text-slate-500 mt-2 font-medium text-left text-left text-left">${w.meaning}</p></div><div class="flex items-center gap-1 text-left text-left text-left"><button onclick="window.playStaticVoice('${w.word.replace(/\u0301/g, '')}')" class="p-3 bg-indigo-50 text-indigo-600 rounded-full active:scale-90 shadow-sm transition-all"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></button><button onclick="window.showWordDeleteConfirm('${lib.id}', ${i}, '${w.word}')" class="p-3 text-rose-300 hover:text-rose-600 transition-all active:scale-90"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>`).join(''); document.getElementById('view-home').classList.add('hidden'); document.getElementById('view-word-list').classList.remove('hidden'); };
         window.showWordDeleteConfirm = (libId, wordIndex, wordText) => { deleteType = 'word'; wordDeleteRef = { libId, wordIndex }; document.getElementById('confirm-title').innerText = "移除该单词？"; document.getElementById('confirm-modal').classList.remove('hidden'); };
-        window.manualSyncCloud = () => { if (isOfflineMode) { window.showToast("LOCAL MODE: NO SYNC"); return; } const icon = document.getElementById('sync-refresh-icon'); icon.classList.add('animate-spin'); loadCoreData(); setTimeout(() => { icon.classList.remove('animate-spin'); window.showToast("SYNC COMPLETED"); }, 1000); };
         window.playStaticVoice = (text) => { const clean = (text || "").replace(/\u0301/g, ''); const utter = new SpeechSynthesisUtterance(clean); utter.lang = 'ru-RU'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(utter); };
         window.startLearnLibrary = (id) => { const lib = allLibraries.find(l => l.id === id); if (!lib || lib.words.length === 0) return; window.sessionWords = [...lib.words].map(w=>({...w, mode: 'RuToCn'})).sort(() => Math.random() - 0.5); window.currentIndex = 0; document.getElementById('learn-progress').innerText = "1 / " + window.sessionWords.length; document.querySelectorAll('body > div').forEach(d => d.classList.add('hidden')); document.getElementById('view-learn').classList.remove('hidden'); renderCard(); };
-        window.addUser = async () => { const input = document.getElementById('new-user-input'); const name = input.value.trim(); if (!name) return; if (!isOfflineMode) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'users'), { name, createdAt: Date.now() }); else { const ls = JSON.parse(localStorage.getItem('itmo_users') || '[]'); ls.push({id: 'u_'+Date.now(), name}); localStorage.setItem('itmo_users', JSON.stringify(ls)); renderLocalUserList(); } input.value = ''; };
         
-        document.getElementById('confirm-ok-btn').onclick = async () => { 
+        document.getElementById('confirm-ok-btn').onclick = () => { 
             if (deleteType === 'user') { 
-                if (!isOfflineMode) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', deleteCandidateId)); 
-                else { let ls = JSON.parse(localStorage.getItem('itmo_users')); ls = ls.filter(u=>u.id!==deleteCandidateId); localStorage.setItem('itmo_users', JSON.stringify(ls)); renderLocalUserList(); }
+                let ls = JSON.parse(localStorage.getItem('itmo_users')); ls = ls.filter(u=>u.id!==deleteCandidateId); localStorage.setItem('itmo_users', JSON.stringify(ls)); renderUserList();
             } else if (deleteType === 'word') {
                 const lib = allLibraries.find(l => l.id === wordDeleteRef.libId);
                 if (lib) {
                     lib.words.splice(wordDeleteRef.wordIndex, 1);
-                    if (!isOfflineMode) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'libraries', lib.id), { words: lib.words });
-                    else { const libs = JSON.parse(localStorage.getItem('itmo_libs')); localStorage.setItem('itmo_libs', JSON.stringify(libs.map(l=>l.id===lib.id?lib:l))); }
-                    window.viewLibraryWords(lib.id); window.showToast("DELETED");
+                    let libs = JSON.parse(localStorage.getItem('itmo_libs')); localStorage.setItem('itmo_libs', JSON.stringify(libs.map(l=>l.id===lib.id?lib:l)));
+                    window.viewLibraryWords(lib.id); window.showToast("已从库中删除");
                 }
             }
             window.closeConfirmModal(); 
         };
 
-        function renderUserItem(id, name, isLocal = false) { const list = document.getElementById('user-list'); const el = document.createElement('div'); el.className = "user-card p-6 pr-8 rounded-[2.5rem] flex justify-between items-center shadow-sm cursor-pointer mb-2"; el.innerHTML = `<div class="flex items-center gap-6 flex-1 text-left" onclick="window.login('${id}', '${name}')"><div class="w-16 h-16 avatar-gradient rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl uppercase text-center">${name[0]}</div><div><p class="font-black text-slate-800 text-xl tracking-tighter italic text-left leading-tight text-left">${name}</p><span class="inline-block mt-1 px-3 py-1 rounded-full text-[9px] font-black uppercase ${isLocal ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm'}">${isLocal ? 'Offline' : 'Active'}</span></div></div><button class="delete-user-btn p-4 text-slate-200 hover:text-rose-500 transition-all rounded-[1.5rem] hover:bg-rose-50 active:rotate-12"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button>`; el.querySelector('.delete-user-btn').onclick = (e) => { e.stopPropagation(); deleteType = 'user'; deleteCandidateId = id; document.getElementById('confirm-title').innerText = "彻底删除该档案？"; document.getElementById('confirm-modal').classList.remove('hidden'); }; list.appendChild(el); }
+        function renderUserItem(id, name) { const list = document.getElementById('user-list'); const el = document.createElement('div'); el.className = "user-card p-6 pr-8 rounded-[2.5rem] flex justify-between items-center shadow-sm cursor-pointer mb-2"; el.innerHTML = `<div class="flex items-center gap-6 flex-1 text-left text-left text-left" onclick="window.login('${id}', '${name}')"><div class="w-16 h-16 avatar-gradient rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl uppercase text-center text-center">${name[0]}</div><div><p class="font-black text-slate-800 text-xl tracking-tighter italic text-left leading-tight text-left text-left text-left text-left">${name}</p><span class="inline-block mt-1 px-3 py-1 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm leading-none tracking-widest text-left text-left">LOCAL ARCHIVE</span></div></div><button class="delete-user-btn p-4 text-slate-200 hover:text-rose-500 transition-all rounded-[1.5rem] hover:bg-rose-50 active:rotate-12"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path></svg></button>`; el.querySelector('.delete-user-btn').onclick = (e) => { e.stopPropagation(); deleteType = 'user'; deleteCandidateId = id; document.getElementById('confirm-title').innerText = "彻底删除该档案？"; document.getElementById('confirm-modal').classList.remove('hidden'); }; list.appendChild(el); }
 
-        window.init();
+        renderUserList();
     </script>
 </body>
 </html>
